@@ -1,0 +1,3 @@
+interface:
+  display_name: "Code Port"
+  short_description: "Adapt features safely across codebases"

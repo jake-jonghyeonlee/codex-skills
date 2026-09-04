@@ -1,6 +1,6 @@
 # Codex Skills
 
-Codex 앱 전용 코드 개발·분석·보안 스킬 8종.
+Codex 앱 전용 코드 개발·분석·보안 스킬 10종.
 GitHub 레포에 `.codex/` 디렉터리를 포함시키면 Codex 앱이 자동 인식한다.
 
 > **CLI(codex CLI)가 아닌 Codex 앱(cloud)에서 사용하는 것을 전제로 설계.**
@@ -12,32 +12,34 @@ GitHub 레포에 `.codex/` 디렉터리를 포함시키면 Codex 앱이 자동 �
 ## 전체 워크플로우
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  0. 목표 정의    1. 이해        2. 구현     3. 검사       4. 보안·테스트 │
-│  ───────────   ──────────    ────────   ──────────    ──────────────    │
-│  define-goal   code-map      Codex 앱   code-audit    security-*       │
-│                code-flow     기본 기능                  test-gap         │
-│                code-arch                                                │
-└──────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│  0. 목표 정의    1. 이해        2. 구현           3. 검사       4. 보안·테스트 │
+│  ───────────   ──────────   ──────────────    ──────────    ──────────────   │
+│  define-goal   code-map     Codex 앱 기본      code-audit    security-*      │
+│                code-flow    + debug-fix (버그)                test-gap        │
+│                code-arch    + code-port (이식)                               │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 시나리오 A — 새 코드 작성 (새 프로젝트 / 새 기능)
 
-처음부터 만드는 경우. 목표를 먼저 정의하고, 참고 레포가 있으면 분석한 뒤 구현.
+처음부터 만드는 경우. 목표를 먼저 정의하고, 참고 레포가 있으면 분석 후 구현.
 
 ```
- 0. 목표 정의         1. 참고 분석 (선택)      2. 구현          3. 검사          4. 보안·테스트
- ──────────         ──────────────         ──────────      ──────────      ──────────────
- define-goal        code-map               Codex 앱         code-audit      security-best-practices
-                    code-flow              기본 기능          (codebase)      security-threat-model
-                    code-arch                                               test-gap (implement)
-     │                   │                     │                │                  │
-     ▼                   ▼                     ▼                ▼                  ▼
- "뭘 만들지?          "참고 레포가             "코드 작성"     "작성한 코드에     "보안 취약점은?
-  성공 기준은?"        어떻게 돌아가지?"                        버그 있나?"       테스트 빠진 곳은?"
+ 0. 목표 정의         1. 참고 분석 (선택)      2. 구현            3. 검사          4. 보안·테스트
+ ──────────         ──────────────         ──────────────    ──────────      ──────────────
+ define-goal        code-map               Codex 앱 기본       code-audit      security-best-practices
+                    code-flow              + code-port (이식)   (codebase)      security-threat-model
+                    code-arch                                                  test-gap (implement)
+     │                   │                      │                │                  │
+     ▼                   ▼                      ▼                ▼                  ▼
+ "뭘 만들지?          "참고 레포가             "코드 작성,       "작성한 코드에     "보안 취약점은?
+  성공 기준은?"        어떻게 돌아가지?"        참고 코드 이식"    버그 있나?"       테스트 빠진 곳은?"
 ```
+
+**code-port 활용**: 참고 레포의 특정 기능을 가져올 때 — 라이선스 확인, 타겟 프로젝트 컨벤션 준수, 출처 기록까지 구조화
 
 **Codex 앱 태스크 예시**:
 
@@ -51,37 +53,78 @@ Step 1 (참고 분석):
 https://github.com/xxx/reference-repo 를
 code-map + code-arch 스킬로 분석해서 docs/에 HTML 저장해.
 
-Step 2 (구현):
-분석 결과 참고해서 src/model.py에 새 모델 클래스 작성해.
+Step 2 (구현 — 이식):
+code-port 스킬로 reference-repo의 MambaVisionMixer 클래스를
+이 프로젝트의 src/models/에 이식해줘.
+타겟 프로젝트 컨벤션에 맞게 조정하고 출처 기록해.
 
 Step 3 (검사):
 code-audit 스킬로 이 레포 전체를 codebase-audit 모드로 감사해줘.
 
-Step 4a (보안):
+Step 4 (보안 + 테스트):
 security-best-practices 스킬로 보안 리뷰 리포트 작성해줘.
-security-threat-model 스킬로 위협 모델링도 해줘.
-
-Step 4b (테스트):
 test-gap 스킬로 src/ 테스트 갭 찾고 tests/에 유닛 테스트 작성해.
-GPU 불필요한 것만.
 ```
 
 ---
 
-## 시나리오 B — 기존 코드 수정 (버그 수정 / 리팩토링 / 기능 추가)
+## 시나리오 B — 버그 수정
 
-이미 있는 코드를 변경하는 경우. 구조를 먼저 파악하고, 수정 범위를 좁혀서 작업.
+이미 있는 코드의 결함을 수정하는 경우. 구조 파악 → 재현 → 진단 → 수정.
 
 ```
- 0. 목표 정의         1. 구조 파악 (필수)      2. 수정          3. 검사          4. 보안·테스트
- ──────────         ──────────────         ──────────      ──────────      ──────────────
- define-goal        code-map               Codex 앱         code-audit      security-best-practices
-                    code-flow              기본 기능          (changes)       test-gap (analysis)
+ 0. 목표 정의         1. 구조 파악 (필수)      2. 버그 수정         3. 검사          4. 보안·테스트
+ ──────────         ──────────────         ──────────────      ──────────      ──────────────
+ define-goal        code-map               debug-fix            code-audit      security-best-practices
+                    code-flow              (재현→진단→수정→검증)  (changes)       test-gap (implement)
                     code-arch
-     │                   │                     │                │                  │
-     ▼                   ▼                     ▼                ▼                  ▼
- "뭘 고칠지?          "지금 코드가             "코드 수정"     "수정한 부분에     "보안 패턴 위반은?
-  완료 기준은?"        어떻게 구성돼 있지?"                     문제 없나?"       변경 관련 테스트는?"
+     │                   │                      │                │                  │
+     ▼                   ▼                      ▼                ▼                  ▼
+ "뭘 고칠지?          "지금 코드가             "버그 재현 →       "수정한 부분에     "보안 패턴 위반은?
+  완료 기준은?"        어떻게 구성돼 있지?"      원인 진단 → 수정"  문제 없나?"       회귀 테스트 빠졌나?"
+```
+
+**debug-fix 핵심 흐름**: 재현 → 가설 수립 → 반증 → 근본 원인 → 최소 수정 → 회귀 테스트
+
+**Codex 앱 태스크 예시**:
+
+```
+Step 0 (목표):
+define-goal 스킬로 목표 정의해줘.
+"models/attention.py에서 head_dim이 0일 때 ZeroDivisionError 발생.
+수정 후 기존 테스트 통과 + 회귀 테스트 추가"
+
+Step 1 (구조 파악):
+code-map 스킬로 models/ 디렉터리의 구조를 분석해줘.
+
+Step 2 (버그 수정):
+debug-fix 스킬로 이 버그를 수정해줘.
+재현 → 근본 원인 진단 → 수정 → 회귀 테스트까지.
+
+Step 3 (검사):
+code-audit 스킬로 main 대비 변경사항을 changes-audit 모드로 검토해줘.
+
+Step 4 (테스트):
+test-gap 스킬로 수정된 파일 관련 테스트 갭 확인하고
+빠진 테스트 작성해.
+```
+
+---
+
+## 시나리오 C — 리팩토링 / 기능 추가
+
+기존 코드의 구조를 개선하거나 새 기능을 추가하는 경우.
+
+```
+ 0. 목표 정의         1. 구조 파악 (필수)      2. 수정              3. 검사          4. 보안·테스트
+ ──────────         ──────────────         ──────────────      ──────────      ──────────────
+ define-goal        code-map               Codex 앱 기본         code-audit      security-best-practices
+                    code-flow              + code-port (이식)     (changes)       test-gap (analysis)
+                    code-arch
+     │                   │                      │                │                  │
+     ▼                   ▼                      ▼                ▼                  ▼
+ "뭘 바꿀지?          "지금 코드가             "리팩토링 /        "수정한 부분에     "보안 패턴 위반은?
+  완료 기준은?"        어떻게 구성돼 있지?"      기능 추가"         문제 없나?"       변경 관련 테스트는?"
 ```
 
 **Codex 앱 태스크 예시**:
@@ -94,7 +137,6 @@ define-goal 스킬로 목표 정의해줘.
 
 Step 1 (구조 파악):
 code-map + code-flow + code-arch 스킬로 이 레포를 분석해줘.
-docs/에 HTML 저장하고 커밋해.
 
 Step 2 (수정):
 models/transformer.py의 Attention 클래스에서
@@ -103,17 +145,14 @@ multi-head attention의 head 수를 설정 가능하게 리팩토링해.
 Step 3 (검사):
 code-audit 스킬로 main 대비 변경사항을 changes-audit 모드로 검토해줘.
 
-Step 4a (보안):
-security-best-practices 스킬로 변경된 코드의 보안 패턴 확인해줘.
-
-Step 4b (테스트):
+Step 4 (테스트):
 test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석해줘.
 분석만 하고 코드는 수정하지 마.
 ```
 
 ---
 
-## 시나리오 C — 코드 리뷰 / 인수인계 (구현 없음)
+## 시나리오 D — 코드 리뷰 / 인수인계 (구현 없음)
 
 남이 작성한 코드를 검토하거나 인수받는 경우. 이해 + 검사 + 보안만 수행.
 
@@ -146,16 +185,18 @@ test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석�
 
 ## 시나리오 비교
 
-|  | A. 새 코드 작성 | B. 기존 코드 수정 | C. 코드 리뷰 |
-|--|:--------------:|:----------------:|:------------:|
-| **define-goal** | ✅ 목표·성공 기준 정의 | ✅ 수정 범위·완료 기준 | — 불필요 |
-| **code-map** | 참고용 (선택) | ✅ 필수 — 의존관계 | ✅ 필수 — 전체 파악 |
-| **code-flow** | 참고용 (선택) | ✅ 필수 — 흐름 영향 | ✅ 필수 — 흐름 파악 |
-| **code-arch** | 참고용 (선택) | ✅ 필수 — 영향 범위 | ✅ 필수 — 계층 파악 |
-| **code-audit** | `codebase` (전체) | `changes` (diff) | `codebase` (전체) |
-| **security-b.p.** | ✅ 보안 패턴 검토 | ✅ 변경 코드 검토 | ✅ 전체 보안 검토 |
-| **security-t.m.** | ✅ 위협 모델링 | — 대규모 변경 시만 | ✅ 위협 모델링 |
-| **test-gap** | `implement` (작성) | `analysis` (분석) | `analysis` (분석) |
+|  | A. 새 코드 | B. 버그 수정 | C. 리팩토링 | D. 코드 리뷰 |
+|--|:---------:|:----------:|:---------:|:----------:|
+| **define-goal** | ✅ 목표 정의 | ✅ 수정 기준 | ✅ 완료 기준 | — |
+| **code-map** | 선택 | ✅ 필수 | ✅ 필수 | ✅ 필수 |
+| **code-flow** | 선택 | ✅ 필수 | ✅ 필수 | ✅ 필수 |
+| **code-arch** | 선택 | 선택 | ✅ 필수 | ✅ 필수 |
+| **debug-fix** | — | ✅ **핵심** | — | — |
+| **code-port** | ✅ 이식 시 | — | ✅ 이식 시 | — |
+| **code-audit** | `codebase` | `changes` | `changes` | `codebase` |
+| **security-b.p.** | ✅ 검토 | ✅ 검토 | ✅ 검토 | ✅ 검토 |
+| **security-t.m.** | ✅ 모델링 | — | — | ✅ 모델링 |
+| **test-gap** | `implement` | `implement` | `analysis` | `analysis` |
 
 ---
 
@@ -179,6 +220,31 @@ test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석�
 | **code-flow** | "데이터가 어떻게 흘러가지?" | 파이프라인별 데이터 흐름 HTML |
 | **code-arch** | "계층이 어떻게 나뉘지? 횡단 관심사는?" | 아키텍처 HTML (사이드 패널 + 접기) |
 
+### Phase 2 — 구현 (debug-fix / code-port)
+
+| 스킬 | 질문 | 동작 | 산출물 |
+|------|------|------|--------|
+| **debug-fix** | "이 버그의 근본 원인은?" | 재현 → 가설·반증 → 근본 원인 → 최소 수정 → 회귀 테스트 | 수정된 코드 + 검증 결과 |
+| **code-port** | "저 레포의 기능을 가져오려면?" | 소스 분석 → 호환성 확인 → 타겟 컨벤션 적용 → 출처 기록 → 검증 | 이식된 코드 + 출처·차이점 리포트 |
+
+**debug-fix vs Codex 앱 기본 코딩의 차이**:
+
+| | Codex 앱 기본 | debug-fix 스킬 |
+|--|:------------:|:-------------:|
+| 접근 | "고쳐줘" → 바로 수정 시도 | 재현 → 가설 → 반증 → 근본 원인 |
+| 증거 | 없음 | 원인 체인 + 재현 로그 |
+| 검증 | 수정 후 테스트 실행 | 수정 전 실패 확인 → 수정 후 통과 확인 |
+| 범위 | 넓게 건드릴 수 있음 | 가장 좁은 수정 (side effect 최소화) |
+
+**code-port vs 수동 복사의 차이**:
+
+| | 수동 복사 | code-port 스킬 |
+|--|:--------:|:-------------:|
+| 라이선스 | 확인 안 함 | 라이선스·출처 확인 → 기록 |
+| 컨벤션 | 소스 그대로 | 타겟 프로젝트 네이밍·구조에 맞게 변환 |
+| 호환성 | 수동 확인 | 비호환 사항 자동 식별 (버전, 동기/비동기 등) |
+| 검증 | 수동 | 소스 테스트 → 타겟 환경 테스트 비교 |
+
 ### Phase 3 — code-audit (코드 감사)
 
 | 항목 | 내용 |
@@ -192,7 +258,7 @@ test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석�
 
 | 스킬 | 질문 | 산출물 |
 |------|------|--------|
-| **security-best-practices** | "보안 코딩 패턴을 따르고 있나?" | `security-report.md` (심각도별 취약점 목록 + 수정 제안) |
+| **security-best-practices** | "보안 코딩 패턴을 따르고 있나?" | `security-report.md` (심각도별 취약점 + 수정 제안) |
 | **security-threat-model** | "이 시스템의 위협과 공격 경로는?" | `threat-model.md` (자산·경계·위협·완화책) |
 
 **차이점**:
@@ -201,9 +267,7 @@ test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석�
 |--|------------------------|----------------------|
 | **관점** | 코드 패턴 수준 (구현) | 시스템 수준 (아키텍처) |
 | **찾는 것** | pickle 역직렬화, 하드코딩 키, SQL 인젝션, XSS | 신뢰 경계, 공격 경로, 권한 상승, 데이터 유출 경로 |
-| **대상** | 특정 언어/프레임워크 코드 | 컴포넌트 간 관계·데이터 흐름 |
-| **출처** | [openai/skills](https://github.com/openai/skills) 공식 curated | [openai/skills](https://github.com/openai/skills) 공식 curated |
-| **참고 자료** | Python(Django/Flask/FastAPI), JS/TS(React/Vue/Next/Express), Go 보안 가이드 내장 | 프롬프트 템플릿 + 보안 컨트롤·자산 체크리스트 내장 |
+| **참고 자료** | Python/JS/TS/Go 프레임워크별 보안 가이드 내장 | 프롬프트 템플릿 + 컨트롤·자산 체크리스트 내장 |
 
 ### Phase 4b — test-gap (테스트 갭 분석)
 
@@ -223,24 +287,30 @@ test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석�
 | 전략 | 설명 |
 |------|------|
 | **define-goal 먼저** | 목표를 명확히 하면 불필요한 탐색·재작업 방지 → 토큰 절약 |
-| **필요한 스킬만** | 8개 전부 돌리지 말고 시나리오에 맞는 것만 선택 |
+| **필요한 스킬만** | 10개 전부 돌리지 말고 시나리오에 맞는 것만 선택 |
 | **analysis only** | test-gap은 분석만 요청하면 토큰 크게 절약 |
+| **diagnosis only** | debug-fix도 "진단만" 요청 가능 (코드 수정 없음) |
 | **한 태스크에 묶기** | 여러 스킬을 한 태스크에 넣으면 컨텍스트 공유로 효율적 |
 | **범위 한정** | "전체 레포" 대신 "src/models/ 디렉터리만"으로 범위 좁히기 |
 
-**최소 토큰 조합** (리뷰만 할 때):
+**최소 조합** (리뷰만):
 ```
-code-map + code-audit 2개면 구조 파악 + 결함 탐지 커버
+code-map + code-audit → 구조 파악 + 결함 탐지
 ```
 
-**권장 토큰 조합** (개발할 때):
+**버그 수정 조합**:
 ```
-define-goal + code-map + code-audit + test-gap 4개로 핵심 커버
+define-goal + code-map + debug-fix + test-gap → 목표 → 구조 → 수정 → 검증
+```
+
+**개발 조합**:
+```
+define-goal + code-map + code-audit + test-gap → 목표 → 구조 → 검사 → 테스트
 ```
 
 **풀 세트** (시간·토큰 여유 있을 때):
 ```
-8개 전부 — 완전한 분석·검사·보안·테스트
+10개 전부 — 목표 → 이해 → 구현 → 검사 → 보안 → 테스트 완전 커버
 ```
 
 ---
@@ -283,6 +353,8 @@ https://github.com/jake-jonghyeonlee/codex-skills 레포에서
 | **code-map** | 1. 이해 | 분석 | `extract_python_symbols.py` + `codemap_dashboard.py` | 보통 | 자체 |
 | **code-flow** | 1. 이해 | 분석 | `detect_project_type.py` + `render_dataflow.py` | 보통 | 자체 |
 | **code-arch** | 1. 이해 | 분석 | `render_architecture.py` | 보통 | 자체 |
+| **debug-fix** | 2. 구현 | 수정 | 없음 | 보통 | 자체 |
+| **code-port** | 2. 구현 | 이식 | 없음 | 보통 | 자체 |
 | **code-audit** | 3. 검사 | 감사 | `code_review_adapter.py` + `audit_dashboard.py` | 보통 | 자체 |
 | **security-best-practices** | 4. 보안 | 보안 | 없음 (references 내장) | 적음 | openai 공식 |
 | **security-threat-model** | 4. 보안 | 보안 | 없음 (references 내장) | 적음 | openai 공식 |

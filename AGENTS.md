@@ -1,6 +1,6 @@
 # Codex 앱 스킬 가이드
 
-이 레포의 `.codex/skills/`에 8개 스킬이 포함되어 있다.
+이 레포의 `.codex/skills/`에 10개 스킬이 포함되어 있다.
 태스크 설명에서 스킬 이름이 언급되면 해당 SKILL.md의 지침을 따른다.
 
 ## 실행 환경
@@ -20,6 +20,10 @@
 - `code-map`: 레포를 읽고 모듈·심볼·의존관계를 JSON으로 정리한 뒤 HTML 대시보드 생성
 - `code-flow`: 프로젝트 유형을 자동 감지하고 데이터 흐름을 JSON으로 정리한 뒤 HTML 다이어그램 생성
 - `code-arch`: 계층 구조를 분석하고 JSON으로 정리한 뒤 HTML 아키텍처 다이어그램 생성
+
+### Phase 2 — 구현 (코드 수정 허용)
+- `debug-fix`: 버그 재현 → 가설·반증 → 근본 원인 → 최소 수정 → 회귀 테스트. "진단만" 요청 시 코드 수정 금지.
+- `code-port`: 소스 레포의 기능을 타겟 레포로 이식. 라이선스·출처 확인 → 타겟 컨벤션 적용 → 검증. 일반적인 코드 수정에는 사용하지 않는다.
 
 ### Phase 3 — 분석 (코드 수정 금지)
 - `code-audit`: 결함을 찾아 HTML 리포트 생성. 결함을 고치지 않는다.
@@ -51,7 +55,7 @@ python3 .codex/skills/code-arch/scripts/render_architecture.py arch.json -o docs
 
 ## 권장 순서
 
-0. define-goal → 1. code-map/flow/arch → 2. (구현) → 3. code-audit → 4. security-* + test-gap
+0. define-goal → 1. code-map/flow/arch → 2. debug-fix/code-port → 3. code-audit → 4. security-* + test-gap
 
 순서를 강제하지 않는다. 태스크에서 특정 스킬만 요청하면 해당 스킬만 실행한다.
 
@@ -60,4 +64,5 @@ python3 .codex/skills/code-arch/scripts/render_architecture.py arch.json -o docs
 - 범위를 좁혀라: "전체 레포" 대신 "src/models/ 디렉터리만"
 - 필요한 스킬만 선택하라: 최소 조합은 code-map + code-audit
 - test-gap은 analysis only로 요청하면 토큰 절약
+- debug-fix는 "진단만" 요청하면 코드 수정 없이 원인 분석만 수행
 - define-goal을 먼저 실행하면 하류 단계에서 불필요한 탐색 방지
