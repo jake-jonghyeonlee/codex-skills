@@ -1,34 +1,52 @@
 # Codex Skills
 
-Codex 앱 전용 코드 분석 스킬 5종.
+Codex 앱 전용 코드 개발·분석·보안 스킬 8종.
 GitHub 레포에 `.codex/` 디렉터리를 포함시키면 Codex 앱이 자동 인식한다.
 
 > **CLI(codex CLI)가 아닌 Codex 앱(cloud)에서 사용하는 것을 전제로 설계.**
 > 모든 스크립트는 표준 라이브러리만 사용하며 외부 패키지 설치 불필요.
+> 폐쇄망 환경에서 토큰을 절약하면서 사용 가능.
 
 ---
 
-## 시나리오별 워크플로우
-
-### A. 새 코드 작성 (새 프로젝트 / 새 기능)
-
-처음부터 만드는 경우. 참고 레포가 있으면 먼저 분석하고, 없으면 바로 구현.
+## 전체 워크플로우
 
 ```
- 참고 레포 분석 (선택)          구현                검사              테스트
- ─────────────────          ──────────        ──────────        ──────────
- code-map                   Codex 앱           code-audit        test-gap
- code-flow                  기본 기능           (codebase-audit)  (implement)
- code-arch
-     │                          │                  │                  │
-     ▼                          ▼                  ▼                  ▼
- "참고 레포가 어떻게         "코드 작성"        "작성한 코드에       "테스트 빠진 곳
-  돌아가는지 파악"                               버그 있나?"         찾아서 작성"
+┌──────────────────────────────────────────────────────────────────────────┐
+│  0. 목표 정의    1. 이해        2. 구현     3. 검사       4. 보안·테스트 │
+│  ───────────   ──────────    ────────   ──────────    ──────────────    │
+│  define-goal   code-map      Codex 앱   code-audit    security-*       │
+│                code-flow     기본 기능                  test-gap         │
+│                code-arch                                                │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 시나리오 A — 새 코드 작성 (새 프로젝트 / 새 기능)
+
+처음부터 만드는 경우. 목표를 먼저 정의하고, 참고 레포가 있으면 분석한 뒤 구현.
+
+```
+ 0. 목표 정의         1. 참고 분석 (선택)      2. 구현          3. 검사          4. 보안·테스트
+ ──────────         ──────────────         ──────────      ──────────      ──────────────
+ define-goal        code-map               Codex 앱         code-audit      security-best-practices
+                    code-flow              기본 기능          (codebase)      security-threat-model
+                    code-arch                                               test-gap (implement)
+     │                   │                     │                │                  │
+     ▼                   ▼                     ▼                ▼                  ▼
+ "뭘 만들지?          "참고 레포가             "코드 작성"     "작성한 코드에     "보안 취약점은?
+  성공 기준은?"        어떻게 돌아가지?"                        버그 있나?"       테스트 빠진 곳은?"
 ```
 
 **Codex 앱 태스크 예시**:
 
 ```
+Step 0 (목표):
+define-goal 스킬로 이 프로젝트의 목표를 정의해줘.
+"PyTorch 기반 이미지 분류 모델, ImageNet top-1 accuracy 80% 이상,
+학습 코드 + 추론 API 포함" 기준으로.
+
 Step 1 (참고 분석):
 https://github.com/xxx/reference-repo 를
 code-map + code-arch 스킬로 분석해서 docs/에 HTML 저장해.
@@ -38,114 +56,192 @@ Step 2 (구현):
 
 Step 3 (검사):
 code-audit 스킬로 이 레포 전체를 codebase-audit 모드로 감사해줘.
-결과를 docs/audit.html로 저장.
 
-Step 4 (테스트):
-test-gap 스킬로 src/ 디렉터리의 테스트 갭을 찾고
-tests/에 유닛 테스트 작성해서 커밋해. GPU 불필요한 것만.
+Step 4a (보안):
+security-best-practices 스킬로 보안 리뷰 리포트 작성해줘.
+security-threat-model 스킬로 위협 모델링도 해줘.
+
+Step 4b (테스트):
+test-gap 스킬로 src/ 테스트 갭 찾고 tests/에 유닛 테스트 작성해.
+GPU 불필요한 것만.
 ```
 
 ---
 
-### B. 기존 코드 수정 (버그 수정 / 리팩토링 / 기능 추가)
+## 시나리오 B — 기존 코드 수정 (버그 수정 / 리팩토링 / 기능 추가)
 
-이미 있는 코드를 변경하는 경우. 먼저 현재 구조를 이해하고 수정한다.
+이미 있는 코드를 변경하는 경우. 구조를 먼저 파악하고, 수정 범위를 좁혀서 작업.
 
 ```
- 현재 구조 이해               수정                검사              테스트
- ──────────────            ──────────        ──────────        ──────────
- code-map                  Codex 앱           code-audit        test-gap
- code-flow                 기본 기능           (changes-audit)   (analysis)
- code-arch
-     │                          │                  │                  │
-     ▼                          ▼                  ▼                  ▼
- "지금 코드가 어떻게         "코드 수정"        "수정한 부분에       "변경 관련 테스트
-  구성돼 있는지 파악"                            문제 없나?"         빠진 곳 확인"
+ 0. 목표 정의         1. 구조 파악 (필수)      2. 수정          3. 검사          4. 보안·테스트
+ ──────────         ──────────────         ──────────      ──────────      ──────────────
+ define-goal        code-map               Codex 앱         code-audit      security-best-practices
+                    code-flow              기본 기능          (changes)       test-gap (analysis)
+                    code-arch
+     │                   │                     │                │                  │
+     ▼                   ▼                     ▼                ▼                  ▼
+ "뭘 고칠지?          "지금 코드가             "코드 수정"     "수정한 부분에     "보안 패턴 위반은?
+  완료 기준은?"        어떻게 구성돼 있지?"                     문제 없나?"       변경 관련 테스트는?"
 ```
 
 **Codex 앱 태스크 예시**:
 
 ```
+Step 0 (목표):
+define-goal 스킬로 목표 정의해줘.
+"Attention 클래스의 head 수를 설정 가능하게 리팩토링,
+기존 테스트 전부 통과, 새 파라미터에 대한 테스트 추가"
+
 Step 1 (구조 파악):
-이 레포를 code-map + code-flow + code-arch 스킬로 분석해줘.
-결과를 docs/에 HTML로 저장하고 커밋해.
+code-map + code-flow + code-arch 스킬로 이 레포를 분석해줘.
+docs/에 HTML 저장하고 커밋해.
 
 Step 2 (수정):
 models/transformer.py의 Attention 클래스에서
 multi-head attention의 head 수를 설정 가능하게 리팩토링해.
 
 Step 3 (검사):
-code-audit 스킬로 main 대비 변경사항(diff)을 changes-audit 모드로 검토해줘.
+code-audit 스킬로 main 대비 변경사항을 changes-audit 모드로 검토해줘.
 
-Step 4 (테스트):
-test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭을 분석해줘.
+Step 4a (보안):
+security-best-practices 스킬로 변경된 코드의 보안 패턴 확인해줘.
+
+Step 4b (테스트):
+test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석해줘.
 분석만 하고 코드는 수정하지 마.
+```
+
+---
+
+## 시나리오 C — 코드 리뷰 / 인수인계 (구현 없음)
+
+남이 작성한 코드를 검토하거나 인수받는 경우. 이해 + 검사 + 보안만 수행.
+
+```
+ 1. 구조 파악              2. 결함 검사              3. 보안 검토              4. 테스트 갭
+ ──────────────          ──────────              ──────────────          ──────────
+ code-map                code-audit              security-best-practices  test-gap
+ code-flow               (codebase)              security-threat-model    (analysis only)
+ code-arch
+     │                       │                       │                       │
+     ▼                       ▼                       ▼                       ▼
+ "이 코드 전체 구조는?"   "버그·구조적 문제는?"    "보안 위협은 뭐가 있지?"  "테스트 빠진 위험 지점은?"
+```
+
+**Codex 앱 태스크 예시**:
+
+```
+이 레포를 전체 분석해줘:
+1. code-map으로 구조 → docs/codemap.html
+2. code-flow로 데이터 흐름 → docs/dataflow.html
+3. code-arch로 아키텍처 → docs/architecture.html
+4. code-audit으로 결함 리포트 → docs/audit.html
+5. security-best-practices로 보안 리포트 → docs/security-report.md
+6. security-threat-model로 위협 모델 → docs/threat-model.md
+7. test-gap으로 테스트 갭 분석 (분석만, 코드 수정 없음)
+모두 생성해서 커밋해.
 ```
 
 ---
 
 ## 시나리오 비교
 
-|  | 새 코드 작성 | 기존 코드 수정 |
-|--|:----------:|:------------:|
-| **Phase 1 목적** | 참고 레포 분석 (선택) | 현재 레포 구조 파악 (필수) |
-| **code-map** | 참고용 — 비슷한 프로젝트 구조 벤치마크 | 필수 — 수정 전 의존관계 확인 |
-| **code-flow** | 참고용 — 데이터 흐름 패턴 참고 | 필수 — 수정이 흐름에 미치는 영향 예측 |
-| **code-arch** | 참고용 — 아키텍처 패턴 참고 | 필수 — 변경 영향 범위 파악 |
-| **code-audit 모드** | `codebase-audit` (전체 스캔) | `changes-audit` (diff만 검토) |
-| **test-gap 모드** | `implement` (테스트 코드 작성) | `analysis` (갭 분석만, 또는 회귀 테스트 작성) |
+|  | A. 새 코드 작성 | B. 기존 코드 수정 | C. 코드 리뷰 |
+|--|:--------------:|:----------------:|:------------:|
+| **define-goal** | ✅ 목표·성공 기준 정의 | ✅ 수정 범위·완료 기준 | — 불필요 |
+| **code-map** | 참고용 (선택) | ✅ 필수 — 의존관계 | ✅ 필수 — 전체 파악 |
+| **code-flow** | 참고용 (선택) | ✅ 필수 — 흐름 영향 | ✅ 필수 — 흐름 파악 |
+| **code-arch** | 참고용 (선택) | ✅ 필수 — 영향 범위 | ✅ 필수 — 계층 파악 |
+| **code-audit** | `codebase` (전체) | `changes` (diff) | `codebase` (전체) |
+| **security-b.p.** | ✅ 보안 패턴 검토 | ✅ 변경 코드 검토 | ✅ 전체 보안 검토 |
+| **security-t.m.** | ✅ 위협 모델링 | — 대규모 변경 시만 | ✅ 위협 모델링 |
+| **test-gap** | `implement` (작성) | `analysis` (분석) | `analysis` (분석) |
 
 ---
 
 ## 스킬 상세
 
-### code-map — 구조 파악
+### Phase 0 — define-goal (목표 정의)
 
 | 항목 | 내용 |
 |------|------|
-| **질문** | "이 파일이 뭘 하지? 모듈 간 의존관계는?" |
-| **동작** | 코드 읽기 전용, 수정 없음 |
-| **산출물** | 모듈·심볼·의존관계 HTML 대시보드 |
-| **스크립트** | `extract_python_symbols.py` → JSON → `codemap_dashboard.py` → HTML |
+| **질문** | "뭘 만들지? 성공 기준은? 완료를 어떻게 검증하지?" |
+| **동작** | 모호한 의도를 구체적·측정 가능한 목표로 변환 |
+| **산출물** | 목표 문장 (검증 방법 + 범위 포함) |
+| **토큰** | 최소 — 구현 전 목표 명확화로 하류 토큰 절약 |
+| **출처** | [openai/skills](https://github.com/openai/skills) 공식 curated |
 
-### code-flow — 데이터 흐름
+### Phase 1 — 이해 (code-map / code-flow / code-arch)
 
-| 항목 | 내용 |
-|------|------|
-| **질문** | "데이터가 어떻게 흘러가지? 파이프라인 구조는?" |
-| **동작** | 프로젝트 유형 자동 감지 (ML, 웹, CLI, 파이프라인, 프론트엔드) → 읽기 전용 |
-| **산출물** | 파이프라인별 데이터 흐름 HTML 다이어그램 |
-| **스크립트** | `detect_project_type.py` → 유형 판별 → JSON → `render_dataflow.py` → HTML |
+| 스킬 | 질문 | 산출물 |
+|------|------|--------|
+| **code-map** | "이 파일이 뭘 하지? 의존관계는?" | 모듈·심볼·의존관계 HTML 대시보드 |
+| **code-flow** | "데이터가 어떻게 흘러가지?" | 파이프라인별 데이터 흐름 HTML |
+| **code-arch** | "계층이 어떻게 나뉘지? 횡단 관심사는?" | 아키텍처 HTML (사이드 패널 + 접기) |
 
-### code-arch — 아키텍처
-
-| 항목 | 내용 |
-|------|------|
-| **질문** | "전체 계층이 어떻게 나뉘고, 횡단 관심사는 뭐지?" |
-| **동작** | 코드 읽기 전용, 수정 없음 |
-| **산출물** | 계층 구조 + 횡단 관심사 HTML 다이어그램 |
-| **스크립트** | JSON → `render_architecture.py` → HTML |
-| **인터랙티브** | 컴포넌트 클릭 → 사이드 패널, 레이어/그룹 접기·펼치기 |
-
-### code-audit — 코드 감사
+### Phase 3 — code-audit (코드 감사)
 
 | 항목 | 내용 |
 |------|------|
-| **질문** | "이 코드에 버그나 보안 취약점이 있나?" |
-| **동작** | 결함 탐지 전용, 코드 수정 없음 |
-| **산출물** | 결함 리포트 HTML (심각도·위치·설명) |
+| **질문** | "이 코드에 버그가 있나?" |
 | **모드** | `codebase-audit` (전체) / `changes-audit` (diff) |
-| **찾는 것** | 정확성 결함, 보안 취약점, 문서-코드 불일치, 구조적 문제 |
+| **찾는 것** | 정확성 결함, 로직 에러, 문서-코드 불일치, 구조적 문제 |
+| **산출물** | 결함 리포트 HTML (심각도·위치·설명) |
 
-### test-gap — 테스트 갭 분석
+### Phase 4a — 보안 (security-best-practices / security-threat-model)
+
+| 스킬 | 질문 | 산출물 |
+|------|------|--------|
+| **security-best-practices** | "보안 코딩 패턴을 따르고 있나?" | `security-report.md` (심각도별 취약점 목록 + 수정 제안) |
+| **security-threat-model** | "이 시스템의 위협과 공격 경로는?" | `threat-model.md` (자산·경계·위협·완화책) |
+
+**차이점**:
+
+| | security-best-practices | security-threat-model |
+|--|------------------------|----------------------|
+| **관점** | 코드 패턴 수준 (구현) | 시스템 수준 (아키텍처) |
+| **찾는 것** | pickle 역직렬화, 하드코딩 키, SQL 인젝션, XSS | 신뢰 경계, 공격 경로, 권한 상승, 데이터 유출 경로 |
+| **대상** | 특정 언어/프레임워크 코드 | 컴포넌트 간 관계·데이터 흐름 |
+| **출처** | [openai/skills](https://github.com/openai/skills) 공식 curated | [openai/skills](https://github.com/openai/skills) 공식 curated |
+| **참고 자료** | Python(Django/Flask/FastAPI), JS/TS(React/Vue/Next/Express), Go 보안 가이드 내장 | 프롬프트 템플릿 + 보안 컨트롤·자산 체크리스트 내장 |
+
+### Phase 4b — test-gap (테스트 갭 분석)
 
 | 항목 | 내용 |
 |------|------|
 | **질문** | "테스트가 빠진 위험 지점이 어디지?" |
-| **동작** | 코드 읽고 리스크 기반 분석. 모드에 따라 테스트 코드 작성 가능 |
-| **산출물** | 테스트 플랜 (analysis) 또는 테스트 코드 (implement) |
-| **모드** | `analysis only` (코드 수정 없음) / `design and implement` (테스트 작성) |
-| **ML 참고** | GPU 불필요 — shape 검증, config 파싱, 전처리, 에러 핸들링 테스트 가능 |
+| **모드** | `analysis only` (분석만) / `design and implement` (테스트 작성) |
+| **찾는 것** | 경계값 미검증, 에러 처리 미테스트, 타입 불일치, 공개 API 미검증 |
+| **ML 참고** | GPU 불필요 — shape 검증, config 파싱, 전처리, 에러 핸들링 |
+
+---
+
+## 토큰 효율 가이드 (폐쇄망용)
+
+토큰이 제한된 환경에서 효율적으로 사용하는 방법:
+
+| 전략 | 설명 |
+|------|------|
+| **define-goal 먼저** | 목표를 명확히 하면 불필요한 탐색·재작업 방지 → 토큰 절약 |
+| **필요한 스킬만** | 8개 전부 돌리지 말고 시나리오에 맞는 것만 선택 |
+| **analysis only** | test-gap은 분석만 요청하면 토큰 크게 절약 |
+| **한 태스크에 묶기** | 여러 스킬을 한 태스크에 넣으면 컨텍스트 공유로 효율적 |
+| **범위 한정** | "전체 레포" 대신 "src/models/ 디렉터리만"으로 범위 좁히기 |
+
+**최소 토큰 조합** (리뷰만 할 때):
+```
+code-map + code-audit 2개면 구조 파악 + 결함 탐지 커버
+```
+
+**권장 토큰 조합** (개발할 때):
+```
+define-goal + code-map + code-audit + test-gap 4개로 핵심 커버
+```
+
+**풀 세트** (시간·토큰 여유 있을 때):
+```
+8개 전부 — 완전한 분석·검사·보안·테스트
+```
 
 ---
 
@@ -181,12 +277,15 @@ https://github.com/jake-jonghyeonlee/codex-skills 레포에서
 
 ## 포함 스킬 요약
 
-| 스킬 | 시나리오 A (새 코드) | 시나리오 B (수정) | 스크립트 | 산출물 |
-|------|:------------------:|:----------------:|:--------:|--------|
-| **code-map** | 참고 분석 | 구조 파악 | `extract_python_symbols.py` + `codemap_dashboard.py` | HTML |
-| **code-flow** | 참고 분석 | 흐름 파악 | `detect_project_type.py` + `render_dataflow.py` | HTML |
-| **code-arch** | 참고 분석 | 영향 범위 | `render_architecture.py` | HTML |
-| **code-audit** | 전체 감사 | diff 검토 | `code_review_adapter.py` + `audit_dashboard.py` | HTML |
-| **test-gap** | 테스트 작성 | 갭 분석 | 없음 (SKILL.md만) | 분석 / 코드 |
+| 스킬 | Phase | 유형 | 스크립트 | 토큰 | 출처 |
+|------|:-----:|:----:|:--------:|:----:|------|
+| **define-goal** | 0. 목표 | 계획 | 없음 | 최소 | openai 공식 |
+| **code-map** | 1. 이해 | 분석 | `extract_python_symbols.py` + `codemap_dashboard.py` | 보통 | 자체 |
+| **code-flow** | 1. 이해 | 분석 | `detect_project_type.py` + `render_dataflow.py` | 보통 | 자체 |
+| **code-arch** | 1. 이해 | 분석 | `render_architecture.py` | 보통 | 자체 |
+| **code-audit** | 3. 검사 | 감사 | `code_review_adapter.py` + `audit_dashboard.py` | 보통 | 자체 |
+| **security-best-practices** | 4. 보안 | 보안 | 없음 (references 내장) | 적음 | openai 공식 |
+| **security-threat-model** | 4. 보안 | 보안 | 없음 (references 내장) | 적음 | openai 공식 |
+| **test-gap** | 4. 테스트 | 분석/구현 | 없음 | 적음~보통 | 자체 |
 
 모든 Python 스크립트는 **표준 라이브러리만** 사용. Codex 앱 클라우드 샌드박스에서 추가 설치 없이 실행 가능.
