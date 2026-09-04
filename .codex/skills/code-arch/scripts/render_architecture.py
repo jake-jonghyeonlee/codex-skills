@@ -157,7 +157,7 @@ h1 {{ font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }}
   gap: 0;
   position: relative;
 }}
-.layers {{ display: flex; flex-direction: column; gap: 6px; position: relative; }}
+.layers {{ display: flex; flex-direction: column; gap: 0; position: relative; }}
 .layers.has-groups {{ padding-left: 22px; }}
 
 .layer {{
@@ -208,14 +208,17 @@ h1 {{ font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }}
 .layer.collapsed .ext-badge {{ display: none; }}
 
 .layer-arrow {{
-  display: flex; justify-content: center; padding: 0 0 0 20px;
+  display: flex; justify-content: center; padding: 6px 0;
+}}
+.layers.has-groups .layer-arrow {{
+  padding-left: 22px;
 }}
 .arrow-down {{
-  width: 2px; height: 10px; background: var(--border); position: relative;
+  width: 2px; height: 20px; background: var(--border); position: relative;
 }}
 .arrow-down::after {{
-  content: ""; position: absolute; bottom: -1px; left: -4px;
-  border: 5px solid transparent; border-top: 5px solid var(--border);
+  content: ""; position: absolute; bottom: -6px; left: -5px;
+  border: 6px solid transparent; border-top: 7px solid var(--border);
 }}
 
 /* Layer groups */
