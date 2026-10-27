@@ -1,68 +1,53 @@
-# Codex 앱 스킬 가이드
+# Codex 앱 스킬 가이드 (이 번들을 포함한 저장소용)
 
-이 레포의 `.codex/skills/`에 10개 스킬이 포함되어 있다.
-태스크 설명에서 스킬 이름이 언급되면 해당 SKILL.md의 지침을 따른다.
+이 저장소의 `.agents/skills/` 에 스킬 17개가 있다. 태스크에서 `$스킬이름` 으로 부르거나 설명에 맞는 요청이면 Codex 가 스스로 고른다.
+`optional/skills/` 는 탐색 경로 밖이다. 사용자가 켜 달라고 하면 그 폴더를 `.agents/skills/` 로 복사한 뒤 쓴다.
 
 ## 실행 환경
 
-- **Codex 앱 클라우드 샌드박스**에서 실행된다.
-- 모든 스크립트는 Python 표준 라이브러리만 사용한다. `pip install` 불필요.
-- GPU가 없다. ML/DL 코드 분석은 가능하지만 모델 학습/추론 실행은 불가.
-- 비대화형이다. 사용자에게 중간 확인을 구하지 말고 태스크를 끝까지 완수한다.
-- 토큰이 제한될 수 있다. 범위를 좁혀서 효율적으로 실행한다.
+- 폐쇄망 Windows x64, CPython 3.12. 네트워크·외부 API·CDN·npm·Playwright 없음. API 키를 묻는 단계가 나오면 그 기능은 이 복사본에서 제거된 것이니 건너뛴다.
+- Python 은 `.venv-skills/Scripts/python.exe` (Git Bash: `source .venv-skills/Scripts/activate`). `python3` 대신 `python` 을 쓴다. 스킬 문서의 `python3 ${SKILL_DIR}/...` 는 경로를 바꿔 쓴다.
+- 스크립트 경로는 SKILL.md 가 있는 디렉터리 기준 `scripts/` 다: `python .agents/skills/code-map/scripts/codemap_dashboard.py project.json -o docs/codemap.html`.
+- 비대화형 태스크에서는 중간 확인을 구하지 말고 끝까지 간다. 대화형이면 범위가 모호할 때만 묻는다.
 
-## 스킬별 동작 규칙
+## 단계별 스킬 (강제 순서 아님)
 
-### Phase 0 — 목표 정의
-- `define-goal`: 모호한 의도를 구체적·측정 가능한 목표로 변환. 성공 기준과 검증 방법 포함.
+| 단계 | 스킬 | 규칙 |
+|---|---|---|
+| 이해 (읽기 전용) | `code-map` | 모듈·심볼·의존관계 JSON → 자체 완결 HTML. 코드 수정 금지 |
+| 구현 | `test-driven-development` | 실패하는 테스트 → 최소 구현 → 리팩터. 테스트가 먼저 실패하는 것을 확인하고 기록 |
+| 구현 | `property-based-testing` | 변환·파서·수치 함수에 Hypothesis 속성 테스트 |
+| 구현 | `bash-defensive-patterns` | 셸 스크립트를 쓸 때 `set -euo pipefail` 등 방어 패턴 |
+| 디버깅 | `systematic-debugging` | 재현 → 패턴 → 가설 → 수정. 원인 없이 수정하지 않는다 |
+| 검사 (읽기 전용) | `code-audit` | 전체(`codebase-audit`) 또는 diff(`changes-audit`) 결함 리포트 HTML. 결함을 고치지 않는다 |
+| 검사 (읽기 전용) | `differential-review` | diff 의 보안·회귀·영향 범위·테스트 커버리지 검토. `gh` 없이 `git diff <base>..<head>` 로 대상을 잡는다 |
+| 검사 | `test-gap` | "분석만" 이면 플랜만, "작성" 이면 테스트 코드 생성 |
+| 마감 | `verification-before-completion` | 완료·수정·통과를 말하기 전에 검증 명령을 실행하고 출력을 확인 |
+| 마감 | `receiving-code-review` | 리뷰 지적은 검증한 뒤 반영. 맞장구로 반영하지 않는다 |
+| 보고서 | `report-templates` | 상태 보고·결정 기록·PR 설명 양식. 내용(근거 수치·날짜·경로)을 마크다운으로 먼저 쓰고 양식에 채운다 |
+| 보고서 | `postmortem-writing` | 장애·실패 회고 |
+| 자료화 | `html-ppt` → `html-to-pdf` / `pdf` | HTML 덱 → PDF. Chrome headless 가 막힌 PC 에서는 `pdf`(reportlab) |
+| 자료화 | `archscribe`, `matplotlib` | 다이어그램(Pillow 렌더러), 그래프 |
 
-### Phase 1 — 읽기 전용 (코드 수정 금지)
-- `code-map`: 레포를 읽고 모듈·심볼·의존관계를 JSON으로 정리한 뒤 HTML 대시보드 생성
-- `code-flow`: 프로젝트 유형을 자동 감지하고 데이터 흐름을 JSON으로 정리한 뒤 HTML 다이어그램 생성
-- `code-arch`: 계층 구조를 분석하고 JSON으로 정리한 뒤 HTML 아키텍처 다이어그램 생성
+## 자료화 운용 규칙
 
-### Phase 2 — 구현 (코드 수정 허용)
-- `debug-fix`: 버그 재현 → 가설·반증 → 근본 원인 → 최소 수정 → 회귀 테스트. "진단만" 요청 시 코드 수정 금지.
-- `code-port`: 소스 레포의 기능을 타겟 레포로 이식. 라이선스·출처 확인 → 타겟 컨벤션 적용 → 검증. 일반적인 코드 수정에는 사용하지 않는다.
+내용과 형식을 분리한다. 스킬은 형식(레이아웃·테마·오프라인 자산·PDF 변환)만 책임진다.
+1. 저장소의 README·docs·결과 파일을 읽고 보고서 **내용을 마크다운으로 먼저** 쓴다(독자, 결정할 것, 근거 수치·날짜 포함). 이 단계에서는 스킬을 부르지 않는다.
+2. 그 마크다운을 입력으로 스킬을 불러 HTML·PDF 로 **렌더링만** 시킨다.
+3. 결과를 눈으로 확인한다(PNG 썸네일, PDF 첫 페이지). 형식 흠은 CSS 에서, 내용 흠은 1번으로 돌아가 고친다.
 
-### Phase 3 — 분석 (코드 수정 금지)
-- `code-audit`: 결함을 찾아 HTML 리포트 생성. 결함을 고치지 않는다.
-
-### Phase 4 — 보안·테스트
-- `security-best-practices`: 언어/프레임워크별 보안 코딩 패턴 검토. 리포트를 `docs/security-report.md`에 저장. 수정은 사용자 요청 시에만.
-- `security-threat-model`: 레포 기반 위협 모델링. 신뢰 경계·자산·공격 경로·완화책 분석. `docs/<project>-threat-model.md`에 저장.
-- `test-gap`: "분석만" 요청 시 테스트 플랜만 출력. "작성" 요청 시 테스트 코드 생성.
+HTML 은 자체 완결이어야 한다: 외부 `<script src>`·`<link>` 없음, 글꼴은 `Segoe UI`·`Malgun Gothic`·`Consolas`, 이미지는 `data:` URI 또는 같은 폴더.
 
 ## 산출물 저장
 
-HTML 산출물은 `docs/` 디렉터리에 저장한다 (없으면 생성):
-- `docs/<project>-codemap.html`
-- `docs/<project>-dataflow.html`
-- `docs/<project>-architecture.html`
-- `docs/<project>-audit.html`
-- `docs/security-report.md`
-- `docs/<project>-threat-model.md`
+- HTML 리포트: `docs/<project>-codemap.html`, `docs/<project>-audit.html`
+- 마크다운 보고서: `docs/reports/<yyyy-mm-dd>-<topic>.md`
+- 발표 자료·PDF: 저장소 밖(예: `D:\work\자료`) 또는 `outputs/`(git-ignored)
+- 태스크에서 다른 경로를 지정하면 그 경로를 따른다.
 
-태스크에서 다른 경로를 지정하면 그 경로를 따른다.
+## 토큰 절약
 
-## 스크립트 실행
-
-각 스킬의 Python 스크립트는 SKILL.md가 있는 디렉터리 기준 `scripts/`에 위치한다:
-
-```sh
-python3 .codex/skills/code-arch/scripts/render_architecture.py arch.json -o docs/architecture.html
-```
-
-## 권장 순서
-
-0. define-goal → 1. code-map/flow/arch → 2. debug-fix/code-port → 3. code-audit → 4. security-* + test-gap
-
-순서를 강제하지 않는다. 태스크에서 특정 스킬만 요청하면 해당 스킬만 실행한다.
-
-## 토큰 절약 팁
-
-- 범위를 좁혀라: "전체 레포" 대신 "src/models/ 디렉터리만"
-- 필요한 스킬만 선택하라: 최소 조합은 code-map + code-audit
-- test-gap은 analysis only로 요청하면 토큰 절약
-- debug-fix는 "진단만" 요청하면 코드 수정 없이 원인 분석만 수행
-- define-goal을 먼저 실행하면 하류 단계에서 불필요한 탐색 방지
+- 범위를 좁힌다: "전체 레포" 대신 "src/models/ 디렉터리만".
+- 최소 조합: `code-map` + `code-audit`. 검토만이면 `differential-review` 하나.
+- `test-gap` 은 "분석만", `systematic-debugging` 은 "진단만" 으로 요청할 수 있다.
+- 한 태스크에 관련 스킬을 묶으면 컨텍스트를 공유한다.

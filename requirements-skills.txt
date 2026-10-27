@@ -1,0 +1,23 @@
+# Core Python dependencies for .agents/skills (Windows x64, CPython 3.12).
+# Install with scripts/install_skills.sh (corporate PyPI) — every pin below has a
+# cp312 / abi3 / pure-Python win_amd64 wheel on public PyPI as of 2026-10-23.
+# optional/skills dependencies live in requirements-optional.txt.
+
+# archscribe (hand-drawn diagrams; Pillow renderer only, no Playwright) and matplotlib
+Pillow==13.0.0
+numpy==2.5.4
+svg.path==7.1
+matplotlib==3.11.2
+
+# html-to-pdf (CDP screenshot / print PDF; needs a local Chrome or Edge)
+# PyMuPDF is AGPL-3.0 — used only by this skill's verification step and onepage crop.
+PyMuPDF==2.0
+websocket-client==1.9.2
+
+# pdf (programmatic PDF with reportlab)
+reportlab==5.1.0
+pdfplumber==0.11.10
+pypdf==6.21.2
+
+# property-based-testing
+hypothesis==6.170.8

@@ -1,0 +1,11 @@
+/* html-ppt :: shared fonts — offline build.
+ * The upstream file @imports eight Google Fonts families. This copy declares the
+ * same family names as aliases of fonts that ship with Windows/macOS so decks
+ * render identically with or without network. Replace with @font-face rules
+ * pointing at local .woff2 files if exact typography is required. */
+:root {
+  --font-sans: "Inter", "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Playfair Display", "Noto Serif SC", Georgia, "Times New Roman", "Batang", serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", Consolas, "Cascadia Mono", Menlo, "D2Coding", monospace;
+  --font-display: "Archivo Black", "Space Grotesk", "Segoe UI Black", "Arial Black", Impact, sans-serif;
+}

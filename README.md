@@ -1,363 +1,161 @@
-# Codex Skills
+# codex-skills — 폐쇄망 Codex 앱용 스킬 번들
 
-Codex 앱 전용 코드 개발·분석·보안 스킬 10종.
-GitHub 레포에 `.codex/` 디렉터리를 포함시키면 Codex 앱이 자동 인식한다.
+코딩 작업과 저장소 보고서 작성에 쓰는 에이전트 스킬 **17종**(+선택 10종)을 한 저장소에 모았다.
+대상 환경은 사내 폐쇄망 Windows x64, CPython 3.12, Codex 앱(ChatGPT 데스크톱·Codex CLI·IDE 확장)이다.
+외부망·CDN·API 키·npm·Playwright 가 필요한 기능은 넣지 않거나 제거했다.
 
-> **CLI(codex CLI)가 아닌 Codex 앱(cloud)에서 사용하는 것을 전제로 설계.**
-> 모든 스크립트는 표준 라이브러리만 사용하며 외부 패키지 설치 불필요.
-> 폐쇄망 환경에서 토큰을 절약하면서 사용 가능.
+- 설치·수정 내역·선정 기준: [`docs/agent-skills.md`](docs/agent-skills.md)
+- 출처 커밋·라이선스: [`docs/source-inventory.md`](docs/source-inventory.md), [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
+- Codex 가 따르는 운영 규칙: [`AGENTS.md`](AGENTS.md) (대상 저장소에 같이 복사한다)
 
----
-
-## 전체 워크플로우
-
-```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│  0. 목표 정의    1. 이해        2. 구현           3. 검사       4. 보안·테스트 │
-│  ───────────   ──────────   ──────────────    ──────────    ──────────────   │
-│  define-goal   code-map     Codex 앱 기본      code-audit    security-*      │
-│                code-flow    + debug-fix (버그)                test-gap        │
-│                code-arch    + code-port (이식)                               │
-└───────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 시나리오 A — 새 코드 작성 (새 프로젝트 / 새 기능)
-
-처음부터 만드는 경우. 목표를 먼저 정의하고, 참고 레포가 있으면 분석 후 구현.
+## 1. 구성
 
 ```
- 0. 목표 정의         1. 참고 분석 (선택)      2. 구현            3. 검사          4. 보안·테스트
- ──────────         ──────────────         ──────────────    ──────────      ──────────────
- define-goal        code-map               Codex 앱 기본       code-audit      security-best-practices
-                    code-flow              + code-port (이식)   (codebase)      security-threat-model
-                    code-arch                                                  test-gap (implement)
-     │                   │                      │                │                  │
-     ▼                   ▼                      ▼                ▼                  ▼
- "뭘 만들지?          "참고 레포가             "코드 작성,       "작성한 코드에     "보안 취약점은?
-  성공 기준은?"        어떻게 돌아가지?"        참고 코드 이식"    버그 있나?"       테스트 빠진 곳은?"
+.agents/skills/     ← Codex 가 자동 탐색하는 17종
+optional/skills/    ← 탐색 경로 밖. 필요할 때 .agents/skills/ 로 복사해 켠다 (10종)
+scripts/            ← install_skills.sh, verify_skills.py
+requirements-skills.txt / requirements-optional.txt
 ```
 
-**code-port 활용**: 참고 레포의 특정 기능을 가져올 때 — 라이선스 확인, 타겟 프로젝트 컨벤션 준수, 출처 기록까지 구조화
+| 단계 | 스킬 | 하는 일 | Python 의존 | 그 외 |
+|---|---|---|---|---|
+| 이해 | `code-map` | 레포 구조·모듈·의존관계 → 자체 완결 HTML 대시보드 | 없음 | — |
+| 구현 | `test-driven-development` | 실패하는 테스트 → 최소 구현 → 리팩터 규율 | 없음 | — |
+| 구현 | `property-based-testing` | Hypothesis 속성 테스트 작성·검토 | hypothesis | — |
+| 구현 | `bash-defensive-patterns` | 방어적 셸 스크립트 패턴 | 없음 | — |
+| 디버깅 | `systematic-debugging` | 재현 → 패턴 → 가설 → 수정 4단계 | 없음 | — |
+| 검사 | `code-audit` | 전체/diff 결함 감사 → HTML 리포트 | 없음 | — |
+| 검사 | `differential-review` | diff 의 보안·회귀·영향 범위·테스트 커버리지 리뷰 → 마크다운 | 없음 | git |
+| 검사 | `test-gap` | 테스트 빠진 위험 지점 분석·보강 | 없음 | — |
+| 마감 | `verification-before-completion` | 완료 선언 전 검증 명령 실행·출력 확인 게이트 | 없음 | — |
+| 마감 | `receiving-code-review` | 리뷰 지적을 검증한 뒤 반영 | 없음 | — |
+| 보고서 | `report-templates` | 상태 보고·결정 기록(ADR)·PR 설명 양식 3종 | 없음 | — |
+| 보고서 | `postmortem-writing` | 장애·실패 회고 문서 | 없음 | — |
+| 자료화 | `html-ppt` | 36 테마 HTML 슬라이드 덱(폴더형), PNG 캡처 | 없음 | Chrome/Edge(PNG) |
+| 자료화 | `html-to-pdf` | HTML/HTML 덱 → PDF(캡처형·벡터형) | PyMuPDF, websocket-client | Chrome/Edge |
+| 자료화 | `pdf` | reportlab 으로 PDF 직접 생성·검토(Chrome 불필요) | reportlab, pdfplumber, pypdf | — |
+| 자료화 | `archscribe` | 손그림 느낌 아키텍처 다이어그램(.excalidraw/PNG) | Pillow, svg.path | — |
+| 자료화 | `matplotlib` | 그래프 작성 규칙·템플릿 | matplotlib, numpy | — |
 
-**Codex 앱 태스크 예시**:
+선택(`optional/skills/`): `ppt-master`(네이티브 PPTX, 컨텍스트 비용 큼), `frontend-slides`(단일 파일 애니메이션 덱), `polars`,
+`code-flow`, `code-arch`, `debug-fix`, `define-goal`, `code-port`, `security-best-practices`, `security-threat-model`. 내린 이유는 `docs/agent-skills.md` §6.
 
-```
-Step 0 (목표):
-define-goal 스킬로 이 프로젝트의 목표를 정의해줘.
-"PyTorch 기반 이미지 분류 모델, ImageNet top-1 accuracy 80% 이상,
-학습 코드 + 추론 API 포함" 기준으로.
+## 2. 설치 (폐쇄망 Windows, Git Bash)
 
-Step 1 (참고 분석):
-https://github.com/xxx/reference-repo 를
-code-map + code-arch 스킬로 분석해서 docs/에 HTML 저장해.
-
-Step 2 (구현 — 이식):
-code-port 스킬로 reference-repo의 MambaVisionMixer 클래스를
-이 프로젝트의 src/models/에 이식해줘.
-타겟 프로젝트 컨벤션에 맞게 조정하고 출처 기록해.
-
-Step 3 (검사):
-code-audit 스킬로 이 레포 전체를 codebase-audit 모드로 감사해줘.
-
-Step 4 (보안 + 테스트):
-security-best-practices 스킬로 보안 리뷰 리포트 작성해줘.
-test-gap 스킬로 src/ 테스트 갭 찾고 tests/에 유닛 테스트 작성해.
-```
-
----
-
-## 시나리오 B — 버그 수정
-
-이미 있는 코드의 결함을 수정하는 경우. 구조 파악 → 재현 → 진단 → 수정.
-
-```
- 0. 목표 정의         1. 구조 파악 (필수)      2. 버그 수정         3. 검사          4. 보안·테스트
- ──────────         ──────────────         ──────────────      ──────────      ──────────────
- define-goal        code-map               debug-fix            code-audit      security-best-practices
-                    code-flow              (재현→진단→수정→검증)  (changes)       test-gap (implement)
-                    code-arch
-     │                   │                      │                │                  │
-     ▼                   ▼                      ▼                ▼                  ▼
- "뭘 고칠지?          "지금 코드가             "버그 재현 →       "수정한 부분에     "보안 패턴 위반은?
-  완료 기준은?"        어떻게 구성돼 있지?"      원인 진단 → 수정"  문제 없나?"       회귀 테스트 빠졌나?"
+```bash
+git clone <사내 git>/codex-skills.git && cd codex-skills
+export PIP_INDEX_URL="https://<corporate-pypi>/simple"
+scripts/install_skills.sh                  # .venv-skills 생성 + 핵심 패키지 10개 + 검증
+scripts/install_skills.sh --with-optional  # ppt-master·polars 까지 쓸 때
 ```
 
-**debug-fix 핵심 흐름**: 재현 → 가설 수립 → 반증 → 근본 원인 → 최소 수정 → 회귀 테스트
+검증 출력의 `required` 가 전부 PASS 면 끝이다. `optional` 의 `chrome headless pdf` 가 WARN 이면 PDF 는 `pdf` 스킬로 만든다.
+Codex 가 Python 을 쓸 때는 `.venv-skills/Scripts/python.exe` 를 쓰게 한다.
 
-**Codex 앱 태스크 예시**:
+**다른 저장소에서 쓰기** (셋 중 하나):
 
-```
-Step 0 (목표):
-define-goal 스킬로 목표 정의해줘.
-"models/attention.py에서 head_dim이 0일 때 ZeroDivisionError 발생.
-수정 후 기존 테스트 통과 + 회귀 테스트 추가"
-
-Step 1 (구조 파악):
-code-map 스킬로 models/ 디렉터리의 구조를 분석해줘.
-
-Step 2 (버그 수정):
-debug-fix 스킬로 이 버그를 수정해줘.
-재현 → 근본 원인 진단 → 수정 → 회귀 테스트까지.
-
-Step 3 (검사):
-code-audit 스킬로 main 대비 변경사항을 changes-audit 모드로 검토해줘.
-
-Step 4 (테스트):
-test-gap 스킬로 수정된 파일 관련 테스트 갭 확인하고
-빠진 테스트 작성해.
+```bash
+# a) 저장소 범위: 대상 레포에 복사
+cp -r codex-skills/.agents <대상레포>/ && cp codex-skills/AGENTS.md <대상레포>/
+# b) 사용자 범위: 모든 레포에서 보이게 링크(Codex 는 심볼릭 링크 폴더를 따라간다)
+ln -s "$(pwd)/.agents/skills" ~/.agents/skills        # Windows 는 %USERPROFILE%\.agents\skills 로 복사
+# c) 선택 스킬 켜기
+cp -r optional/skills/ppt-master .agents/skills/
 ```
 
----
+## 3. 호출 방법 — 꼭 따로 불러야 하나?
 
-## 시나리오 C — 리팩토링 / 기능 추가
+아니다. 두 경로가 다 열려 있다.
 
-기존 코드의 구조를 개선하거나 새 기능을 추가하는 경우.
+| 방식 | 어떻게 | 언제 쓰나 |
+|---|---|---|
+| **자동(암시) 호출** | 그냥 한국어로 요청한다. Codex 가 스킬 목록의 description 과 요청을 맞춰 스스로 고른다. 모든 description 앞에 `[KO] …` 트리거를 넣어 두었다 | 디버깅·검증·리뷰 반영처럼 "규율" 성격의 스킬. 예: "왜 테스트가 깨지지?" → `systematic-debugging` |
+| **명시 호출** | 프롬프트에 `$code-map`, `$differential-review` 처럼 적는다. ChatGPT 데스크톱은 `@`, Codex CLI/IDE 는 `/skills` 또는 `$` 로 고른다 | 산출물이 있는 스킬(HTML·PDF·보고서)과 단계가 정해진 워크플로우. 어떤 스킬이 돌았는지 확실히 하고 싶을 때 |
 
-```
- 0. 목표 정의         1. 구조 파악 (필수)      2. 수정              3. 검사          4. 보안·테스트
- ──────────         ──────────────         ──────────────      ──────────      ──────────────
- define-goal        code-map               Codex 앱 기본         code-audit      security-best-practices
-                    code-flow              + code-port (이식)     (changes)       test-gap (analysis)
-                    code-arch
-     │                   │                      │                │                  │
-     ▼                   ▼                      ▼                ▼                  ▼
- "뭘 바꿀지?          "지금 코드가             "리팩토링 /        "수정한 부분에     "보안 패턴 위반은?
-  완료 기준은?"        어떻게 구성돼 있지?"      기능 추가"         문제 없나?"       변경 관련 테스트는?"
-```
+권장: **산출물 스킬은 명시 호출, 규율 스킬은 자동에 맡긴다.** 자동 호출이 빗나가면 명시 호출로 바꾸면 된다.
+스킬 목록 예산은 컨텍스트의 2%(최대 10,000 토큰)라서 17종 전부가 보이는지 Codex 의 스킬 패널에서 한 번 확인한다. 잘리면 `optional/` 로 더 내린다.
 
-**Codex 앱 태스크 예시**:
+특정 스킬의 자동 호출을 막으려면 그 스킬의 `agents/openai.yaml` 에 `policy: {allow_implicit_invocation: false}` 를 두면 `$skill` 로만 불린다.
+
+## 4. 시나리오별 활용
+
+### A. 기능 추가 / 리팩토링
 
 ```
-Step 0 (목표):
-define-goal 스킬로 목표 정의해줘.
-"Attention 클래스의 head 수를 설정 가능하게 리팩토링,
-기존 테스트 전부 통과, 새 파라미터에 대한 테스트 추가"
-
-Step 1 (구조 파악):
-code-map + code-flow + code-arch 스킬로 이 레포를 분석해줘.
-
-Step 2 (수정):
-models/transformer.py의 Attention 클래스에서
-multi-head attention의 head 수를 설정 가능하게 리팩토링해.
-
-Step 3 (검사):
-code-audit 스킬로 main 대비 변경사항을 changes-audit 모드로 검토해줘.
-
-Step 4 (테스트):
-test-gap 스킬로 수정된 models/transformer.py 관련 테스트 갭 분석해줘.
-분석만 하고 코드는 수정하지 마.
+1. $code-map 으로 src/<모듈> 범위만 분석해서 docs/<project>-codemap.html 에 저장해.     ← 구조 파악(읽기 전용)
+2. $test-driven-development 로 <기능> 을 구현해. 실패하는 테스트부터 쓰고, 실패 출력을 보여 준 뒤 구현해.
+3. (변환·파서·수치 함수가 있으면) $property-based-testing 으로 왕복/불변량 속성 테스트를 추가해.
+4. $test-gap 으로 변경 파일 관련 테스트 갭을 분석만 해. 코드는 수정하지 마.
+5. $verification-before-completion — 테스트·린트를 실제로 실행하고 출력을 붙여서 결과를 보고해.
 ```
 
----
-
-## 시나리오 D — 코드 리뷰 / 인수인계 (구현 없음)
-
-남이 작성한 코드를 검토하거나 인수받는 경우. 이해 + 검사 + 보안만 수행.
+### B. 버그 수정
 
 ```
- 1. 구조 파악              2. 결함 검사              3. 보안 검토              4. 테스트 갭
- ──────────────          ──────────              ──────────────          ──────────
- code-map                code-audit              security-best-practices  test-gap
- code-flow               (codebase)              security-threat-model    (analysis only)
- code-arch
-     │                       │                       │                       │
-     ▼                       ▼                       ▼                       ▼
- "이 코드 전체 구조는?"   "버그·구조적 문제는?"    "보안 위협은 뭐가 있지?"  "테스트 빠진 위험 지점은?"
+1. $systematic-debugging 으로 <증상> 의 원인을 찾아. 먼저 재현하고, 원인 없이는 수정하지 마.   ← "진단만" 이라고 하면 수정 없이 끝
+2. 원인이 나오면 $test-driven-development 로 재현 테스트를 먼저 쓰고 최소 수정해.
+3. $differential-review 로 git diff main..HEAD 를 검토해. 회귀·영향 범위·테스트 누락을 markdown 으로.
+4. $verification-before-completion
 ```
 
-**Codex 앱 태스크 예시**:
+### C. 남의 코드 검토 / 인수인계 (수정 없음)
 
 ```
-이 레포를 전체 분석해줘:
-1. code-map으로 구조 → docs/codemap.html
-2. code-flow로 데이터 흐름 → docs/dataflow.html
-3. code-arch로 아키텍처 → docs/architecture.html
-4. code-audit으로 결함 리포트 → docs/audit.html
-5. security-best-practices로 보안 리포트 → docs/security-report.md
-6. security-threat-model로 위협 모델 → docs/threat-model.md
-7. test-gap으로 테스트 갭 분석 (분석만, 코드 수정 없음)
-모두 생성해서 커밋해.
+$code-map → docs/<project>-codemap.html
+$code-audit 를 codebase-audit 모드로 → docs/<project>-audit.html
+$differential-review 로 <base>..<head> 의 변경을 검토 → docs/reports/<날짜>-review.md
+$test-gap 분석만
 ```
 
----
+리뷰를 **받는** 쪽이면: "이 리뷰 코멘트를 $receiving-code-review 규칙대로 하나씩 검증한 뒤 반영 여부를 정해."
 
-## 시나리오 비교
-
-|  | A. 새 코드 | B. 버그 수정 | C. 리팩토링 | D. 코드 리뷰 |
-|--|:---------:|:----------:|:---------:|:----------:|
-| **define-goal** | ✅ 목표 정의 | ✅ 수정 기준 | ✅ 완료 기준 | — |
-| **code-map** | 선택 | ✅ 필수 | ✅ 필수 | ✅ 필수 |
-| **code-flow** | 선택 | ✅ 필수 | ✅ 필수 | ✅ 필수 |
-| **code-arch** | 선택 | 선택 | ✅ 필수 | ✅ 필수 |
-| **debug-fix** | — | ✅ **핵심** | — | — |
-| **code-port** | ✅ 이식 시 | — | ✅ 이식 시 | — |
-| **code-audit** | `codebase` | `changes` | `changes` | `codebase` |
-| **security-b.p.** | ✅ 검토 | ✅ 검토 | ✅ 검토 | ✅ 검토 |
-| **security-t.m.** | ✅ 모델링 | — | — | ✅ 모델링 |
-| **test-gap** | `implement` | `implement` | `analysis` | `analysis` |
-
----
-
-## 스킬 상세
-
-### Phase 0 — define-goal (목표 정의)
-
-| 항목 | 내용 |
-|------|------|
-| **질문** | "뭘 만들지? 성공 기준은? 완료를 어떻게 검증하지?" |
-| **동작** | 모호한 의도를 구체적·측정 가능한 목표로 변환 |
-| **산출물** | 목표 문장 (검증 방법 + 범위 포함) |
-| **토큰** | 최소 — 구현 전 목표 명확화로 하류 토큰 절약 |
-| **출처** | [openai/skills](https://github.com/openai/skills) 공식 curated |
-
-### Phase 1 — 이해 (code-map / code-flow / code-arch)
-
-| 스킬 | 질문 | 산출물 |
-|------|------|--------|
-| **code-map** | "이 파일이 뭘 하지? 의존관계는?" | 모듈·심볼·의존관계 HTML 대시보드 |
-| **code-flow** | "데이터가 어떻게 흘러가지?" | 파이프라인별 데이터 흐름 HTML |
-| **code-arch** | "계층이 어떻게 나뉘지? 횡단 관심사는?" | 아키텍처 HTML (사이드 패널 + 접기) |
-
-### Phase 2 — 구현 (debug-fix / code-port)
-
-| 스킬 | 질문 | 동작 | 산출물 |
-|------|------|------|--------|
-| **debug-fix** | "이 버그의 근본 원인은?" | 재현 → 가설·반증 → 근본 원인 → 최소 수정 → 회귀 테스트 | 수정된 코드 + 검증 결과 |
-| **code-port** | "저 레포의 기능을 가져오려면?" | 소스 분석 → 호환성 확인 → 타겟 컨벤션 적용 → 출처 기록 → 검증 | 이식된 코드 + 출처·차이점 리포트 |
-
-**debug-fix vs Codex 앱 기본 코딩의 차이**:
-
-| | Codex 앱 기본 | debug-fix 스킬 |
-|--|:------------:|:-------------:|
-| 접근 | "고쳐줘" → 바로 수정 시도 | 재현 → 가설 → 반증 → 근본 원인 |
-| 증거 | 없음 | 원인 체인 + 재현 로그 |
-| 검증 | 수정 후 테스트 실행 | 수정 전 실패 확인 → 수정 후 통과 확인 |
-| 범위 | 넓게 건드릴 수 있음 | 가장 좁은 수정 (side effect 최소화) |
-
-**code-port vs 수동 복사의 차이**:
-
-| | 수동 복사 | code-port 스킬 |
-|--|:--------:|:-------------:|
-| 라이선스 | 확인 안 함 | 라이선스·출처 확인 → 기록 |
-| 컨벤션 | 소스 그대로 | 타겟 프로젝트 네이밍·구조에 맞게 변환 |
-| 호환성 | 수동 확인 | 비호환 사항 자동 식별 (버전, 동기/비동기 등) |
-| 검증 | 수동 | 소스 테스트 → 타겟 환경 테스트 비교 |
-
-### Phase 3 — code-audit (코드 감사)
-
-| 항목 | 내용 |
-|------|------|
-| **질문** | "이 코드에 버그가 있나?" |
-| **모드** | `codebase-audit` (전체) / `changes-audit` (diff) |
-| **찾는 것** | 정확성 결함, 로직 에러, 문서-코드 불일치, 구조적 문제 |
-| **산출물** | 결함 리포트 HTML (심각도·위치·설명) |
-
-### Phase 4a — 보안 (security-best-practices / security-threat-model)
-
-| 스킬 | 질문 | 산출물 |
-|------|------|--------|
-| **security-best-practices** | "보안 코딩 패턴을 따르고 있나?" | `security-report.md` (심각도별 취약점 + 수정 제안) |
-| **security-threat-model** | "이 시스템의 위협과 공격 경로는?" | `threat-model.md` (자산·경계·위협·완화책) |
-
-**차이점**:
-
-| | security-best-practices | security-threat-model |
-|--|------------------------|----------------------|
-| **관점** | 코드 패턴 수준 (구현) | 시스템 수준 (아키텍처) |
-| **찾는 것** | pickle 역직렬화, 하드코딩 키, SQL 인젝션, XSS | 신뢰 경계, 공격 경로, 권한 상승, 데이터 유출 경로 |
-| **참고 자료** | Python/JS/TS/Go 프레임워크별 보안 가이드 내장 | 프롬프트 템플릿 + 컨트롤·자산 체크리스트 내장 |
-
-### Phase 4b — test-gap (테스트 갭 분석)
-
-| 항목 | 내용 |
-|------|------|
-| **질문** | "테스트가 빠진 위험 지점이 어디지?" |
-| **모드** | `analysis only` (분석만) / `design and implement` (테스트 작성) |
-| **찾는 것** | 경계값 미검증, 에러 처리 미테스트, 타입 불일치, 공개 API 미검증 |
-| **ML 참고** | GPU 불필요 — shape 검증, config 파싱, 전처리, 에러 핸들링 |
-
----
-
-## 토큰 효율 가이드 (폐쇄망용)
-
-토큰이 제한된 환경에서 효율적으로 사용하는 방법:
-
-| 전략 | 설명 |
-|------|------|
-| **define-goal 먼저** | 목표를 명확히 하면 불필요한 탐색·재작업 방지 → 토큰 절약 |
-| **필요한 스킬만** | 10개 전부 돌리지 말고 시나리오에 맞는 것만 선택 |
-| **analysis only** | test-gap은 분석만 요청하면 토큰 크게 절약 |
-| **diagnosis only** | debug-fix도 "진단만" 요청 가능 (코드 수정 없음) |
-| **한 태스크에 묶기** | 여러 스킬을 한 태스크에 넣으면 컨텍스트 공유로 효율적 |
-| **범위 한정** | "전체 레포" 대신 "src/models/ 디렉터리만"으로 범위 좁히기 |
-
-**최소 조합** (리뷰만):
-```
-code-map + code-audit → 구조 파악 + 결함 탐지
-```
-
-**버그 수정 조합**:
-```
-define-goal + code-map + debug-fix + test-gap → 목표 → 구조 → 수정 → 검증
-```
-
-**개발 조합**:
-```
-define-goal + code-map + code-audit + test-gap → 목표 → 구조 → 검사 → 테스트
-```
-
-**풀 세트** (시간·토큰 여유 있을 때):
-```
-10개 전부 — 목표 → 이해 → 구현 → 검사 → 보안 → 테스트 완전 커버
-```
-
----
-
-## 설치 방법
-
-### 방법 1: 직접 복사 (권장)
-
-```sh
-git clone https://github.com/jake-jonghyeonlee/codex-skills.git
-cp -r codex-skills/.codex/ /path/to/target-project/
-cp codex-skills/AGENTS.md /path/to/target-project/
-cd /path/to/target-project
-git add .codex/ AGENTS.md && git commit -m "chore: Codex 앱 스킬 추가" && git push
-```
-
-### 방법 2: 서브모듈
-
-```sh
-cd /path/to/target-project
-git submodule add https://github.com/jake-jonghyeonlee/codex-skills.git .codex-skills
-ln -s .codex-skills/.codex .codex
-cp .codex-skills/AGENTS.md .
-```
-
-### 방법 3: Codex 앱 태스크에서 직접 설치
+### D. 저장소 보고서 (주간 보고·결정 기록·회고)
 
 ```
-https://github.com/jake-jonghyeonlee/codex-skills 레포에서
-.codex/ 디렉터리와 AGENTS.md를 이 프로젝트 루트로 복사하고 커밋해.
+1. 내용 먼저: README·docs·테스트 결과·git log 를 읽고 보고서 내용을 마크다운 메모로 써.
+   (독자, 결정해야 할 것, 근거 수치·날짜·파일 경로 포함. 이 단계는 스킬 없이.)
+2. $report-templates 의 status_report 양식에 그 내용을 채워 docs/reports/<날짜>-status.md 로 저장해.
+   - 설계 결정이면 decision_record, PR 설명이면 pull_request 양식
+   - 장애·실패 회고면 $postmortem-writing
+3. 그림이 필요하면 $archscribe(구조도) / $matplotlib(수치 그래프) 로 PNG 를 만들어 같은 폴더에 두고 링크해.
+4. 발표용이면 $html-ppt 로 덱을 만들고 $html-to-pdf 로 PDF 를 뽑아. Chrome 이 막혀 있으면 $pdf 로 바로 PDF.
 ```
 
----
+내용과 형식을 분리하는 이유: 같은 형식으로 비교했을 때 결과 품질은 스킬이 아니라 모델이 근거 문서를 얼마나 읽었느냐가 결정했다.
+스킬의 "간결하게", "카드 3개" 같은 형식 규칙이 내용을 깎으면 읽기용 자료임을 명시하고 표 중심 레이아웃을 쓰게 한다.
 
-## 포함 스킬 요약
+## 5. 스킬별 사용 메모
 
-| 스킬 | Phase | 유형 | 스크립트 | 토큰 | 출처 |
-|------|:-----:|:----:|:--------:|:----:|------|
-| **define-goal** | 0. 목표 | 계획 | 없음 | 최소 | openai 공식 |
-| **code-map** | 1. 이해 | 분석 | `extract_python_symbols.py` + `codemap_dashboard.py` | 보통 | 자체 |
-| **code-flow** | 1. 이해 | 분석 | `detect_project_type.py` + `render_dataflow.py` | 보통 | 자체 |
-| **code-arch** | 1. 이해 | 분석 | `render_architecture.py` | 보통 | 자체 |
-| **debug-fix** | 2. 구현 | 수정 | 없음 | 보통 | 자체 |
-| **code-port** | 2. 구현 | 이식 | 없음 | 보통 | 자체 |
-| **code-audit** | 3. 검사 | 감사 | `code_review_adapter.py` + `audit_dashboard.py` | 보통 | 자체 |
-| **security-best-practices** | 4. 보안 | 보안 | 없음 (references 내장) | 적음 | openai 공식 |
-| **security-threat-model** | 4. 보안 | 보안 | 없음 (references 내장) | 적음 | openai 공식 |
-| **test-gap** | 4. 테스트 | 분석/구현 | 없음 | 적음~보통 | 자체 |
+| 스킬 | 프롬프트 예 | 산출물 / 주의 |
+|---|---|---|
+| `code-map` | `$code-map 으로 이 레포를 분석해 docs/x-codemap.html 저장` | 읽기 전용. 큰 레포는 디렉터리를 지정해 범위를 좁힌다 |
+| `code-audit` | `$code-audit codebase-audit 모드` / `changes-audit 로 main 대비` | 결함을 찾기만 한다. 고치려면 별도 지시 |
+| `differential-review` | `$differential-review 로 a1b2c3..HEAD 검토` | PR 번호 대신 커밋 범위를 준다(`gh` 없음). 결과는 마크다운 |
+| `test-driven-development` | `$test-driven-development 로 X 구현. 실패 출력 먼저 보여 줘` | 테스트가 먼저 실패하는지 확인하는 것이 핵심 |
+| `property-based-testing` | `$property-based-testing 으로 encode/decode 왕복 속성 테스트` | hypothesis 필요. 수치 함수·파서에 효과적 |
+| `test-gap` | `$test-gap 분석만` / `$test-gap 으로 빠진 테스트 작성` | "분석만" 이면 토큰 절약 |
+| `systematic-debugging` | `$systematic-debugging 진단만` | 재현 로그와 원인 체인을 남긴다 |
+| `verification-before-completion` | 자동 호출에 맡겨도 되지만 마감 때 명시하면 확실 | 검증 명령의 실제 출력이 없으면 완료가 아니다 |
+| `receiving-code-review` | `이 리뷰를 $receiving-code-review 규칙으로 처리` | 지적이 틀렸으면 근거를 들어 반박하게 한다 |
+| `report-templates` | `$report-templates status_report 양식으로` | Mermaid 는 텍스트로만 남긴다(폐쇄망에선 렌더 안 될 수 있음) |
+| `postmortem-writing` | `$postmortem-writing 으로 어제 배포 실패 회고` | 비난 없는 회고, 타임라인·액션 아이템 |
+| `html-ppt` | `$html-ppt 로 8장 덱, 테마 X, 읽기용 고밀도 표` | `scripts/new_deck.py`, `render.py`(PNG). 외부 폰트·CDN 없음 |
+| `html-to-pdf` | `$html-to-pdf slides-raster 로 PDF` | 화면 그대로면 `*-raster`, 글자 선택이 필요하면 `screen-vector`, 보고서는 `onepage` |
+| `pdf` | `$pdf 로 reportlab 보고서 PDF` | Chrome 없이 동작 |
+| `archscribe` | `$archscribe 로 데이터 파이프라인 구조도 PNG` | Pillow 렌더러만. 한글은 Malgun Gothic 폴백. `µ` 같은 기호는 ASCII 로 |
+| `matplotlib` | `$matplotlib 으로 epoch-loss 그래프 PNG` | `python scripts/...` 로 실행(uv 아님) |
+| `bash-defensive-patterns` | 셸 스크립트 작성 요청 시 자동 | `set -euo pipefail`, 인용, 임시파일 정리 |
 
-모든 Python 스크립트는 **표준 라이브러리만** 사용. Codex 앱 클라우드 샌드박스에서 추가 설치 없이 실행 가능.
+## 6. 검증
+
+```bash
+.venv-skills/Scripts/python.exe -I scripts/verify_skills.py           # Git Bash: .venv-skills/bin/python (macOS)
+```
+
+`required`: Python 3.12, 핵심 패키지 10개 import, `.agents/skills` 17개 폴더의 `name` 유효·중복 없음, **`offline assets`**(HTML/CSS/JS/Python 에 외부 `src=`/`href=` 없음).
+`optional`: 선택 패키지 6개, `optional/skills` 폴더, Chrome headless PDF, ppt-master 무결성 게이트. `--strict` 면 optional 실패도 종료 코드 1.
+
+## 7. 업스트림 갱신·추가
+
+외부망에서 `docs/source-inventory.md` 의 커밋 기준으로 해당 디렉터리만 다시 가져오고 `docs/agent-skills.md` §4 의 수정을 재적용한다.
+스킬을 더할 때는 (1) 네트워크·npm·Playwright·API 키 의존이 없는지, (2) LICENSE 파일이 있는지, (3) description 이 400자 안팎인지, (4) `verify_skills.py` 의 `offline assets` 가 PASS 인지 확인한다.
