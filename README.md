@@ -7,12 +7,14 @@
 - 설치·수정 내역·선정 기준: [`docs/agent-skills.md`](docs/agent-skills.md)
 - 출처 커밋·라이선스: [`docs/source-inventory.md`](docs/source-inventory.md), [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 - Codex 가 따르는 운영 규칙: [`AGENTS.md`](AGENTS.md) (대상 저장소에 같이 복사한다)
+- Codex 앱 전역 규칙(행동·문서 신뢰도·통제 언어·Git 안전): [`global/AGENTS.md`](global/AGENTS.md) → `%USERPROFILE%\.codex\AGENTS.md` 로 복사. 출처와 근거는 [`docs/global-rules.md`](docs/global-rules.md)
 
 ## 1. 구성
 
 ```
 .agents/skills/     ← Codex 가 자동 탐색하는 17종
 optional/skills/    ← 탐색 경로 밖. 필요할 때 .agents/skills/ 로 복사해 켠다 (10종)
+global/AGENTS.md    ← Codex 앱 전역 규칙. %USERPROFILE%\.codex\AGENTS.md 로 복사 (모든 저장소에 적용)
 scripts/            ← install_skills.sh, verify_skills.py
 requirements-skills.txt / requirements-optional.txt
 ```
@@ -51,6 +53,16 @@ scripts/install_skills.sh --with-optional  # ppt-master·polars 까지 쓸 때
 
 검증 출력의 `required` 가 전부 PASS 면 끝이다. `optional` 의 `chrome headless pdf` 가 WARN 이면 PDF 는 `pdf` 스킬로 만든다.
 Codex 가 Python 을 쓸 때는 `.venv-skills/Scripts/python.exe` 를 쓰게 한다.
+
+**전역 규칙 설치** (한 번만):
+
+```bash
+mkdir -p ~/.codex && cp global/AGENTS.md ~/.codex/AGENTS.md    # Windows: %USERPROFILE%\.codex\AGENTS.md
+```
+
+Codex 는 `~/.codex/AGENTS.md` 를 모든 저장소에서 먼저 읽고, 그 뒤에 저장소 루트의 AGENTS.md 를 붙인다.
+합산 상한은 32 KiB(`project_doc_max_bytes`)다. 전역 8.7 KB + 이 번들의 AGENTS.md 4.4 KB 라 여유가 있지만,
+저장소 AGENTS.md 가 20 KB 를 넘으면 `~/.codex/config.toml` 에서 상한을 올린다. 파일을 바꾸면 Codex 를 다시 시작한다.
 
 **다른 저장소에서 쓰기** (셋 중 하나):
 

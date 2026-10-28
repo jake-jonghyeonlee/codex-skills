@@ -29,5 +29,11 @@ Every skill directory keeps its upstream LICENSE file. Source commits and the SH
 | `security-best-practices`, `security-threat-model`, `define-goal` | openai/skills (`skills/.curated/*`) | Apache-2.0 (`LICENSE.txt` in each) |
 | `code-flow`, `code-arch`, `code-port`, `debug-fix` | this repository | same as repository |
 
+## `global/AGENTS.md`
+
+Sections 1–4 are a Korean paraphrase of the four principles in multica-ai/andrej-karpathy-skills `CLAUDE.md` (MIT),
+which summarises Andrej Karpathy's public notes on LLM coding mistakes. Sections 5–8 are written in this repository.
+Sources and rationale: `docs/global-rules.md`.
+
 Python packages installed from `requirements-skills.txt` / `requirements-optional.txt` are not redistributed here.
 PyMuPDF (used only by `html-to-pdf`) is AGPL-3.0.
