@@ -1,7 +1,7 @@
 # 리뷰 프로필: codex --profile review
 # 설치: %USERPROFILE%\.codex\review.config.toml
 # 독립 리뷰(전역 규칙 7a)용. 작성자 스레드와 다른 새 스레드에서 쓴다.
-model = "gpt-6.1-luna"             # 리뷰·분석용. 폐쇄망에서 보이는 이름으로 바꾼다
+model = "gpt-6.1-sol"              # 리뷰·분석용
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 approval_policy = "on-request"

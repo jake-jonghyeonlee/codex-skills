@@ -12,9 +12,16 @@ cp codex-home/rules/default.rules   ~/.codex/rules/default.rules
 cp codex-home/agents/*.toml         ~/.codex/agents/
 cp codex-home/review.config.toml    ~/.codex/review.config.toml
 cp codex-home/qa.config.toml        ~/.codex/qa.config.toml
+mkdir -p ~/.codex/scripts && cp codex-home/scripts/codex_usage.py ~/.codex/scripts/
+cp codex-home/hooks.json ~/.codex/hooks.json      # 기존 hooks.json 이 있으면 두 이벤트만 합친다
 # config.toml 은 덮어쓰지 말고 필요한 키만 옮긴다
 cat codex-home/config.toml.example
 ```
+
+Windows 에서는 `hooks.json` 의 `commandWindows` 경로 `C:/Users/<계정>/…` 을 실제 계정으로 바꾼다.
+새 hook 은 Codex 에서 `/hooks` 로 한 번 신뢰(trust)해야 돈다. 파일을 바꾸면 해시가 달라져 다시 신뢰해야 한다.
+
+모델 배치(2026-10-28 사용자 결정): 일상·worker·explorer = `gpt-6-luna`, 리뷰(review 프로필·reviewer 에이전트) = `gpt-6.1-sol`.
 
 적용 뒤 Codex 앱을 다시 시작한다. 실행 정책은 `codex execpolicy check -- git status` 로 어떤 규칙이 맞는지 본다.
 
@@ -23,7 +30,36 @@ cat codex-home/config.toml.example
 | `rules/default.rules` | `~/.codex/rules/` | 명령 접두사별 allow / prompt / forbidden. 승인 클릭을 줄이고 파괴적 git 을 막는다 |
 | `config.toml.example` | `~/.codex/config.toml` 에 키만 옮김 | 모델·effort, 승인·샌드박스, AGENTS.md 상한 64 KiB, 스킬 예산 10,000, 서브에이전트 상한 2, 알림 |
 | `review.config.toml`, `qa.config.toml` | `~/.codex/` | `codex --profile review` (luna, high, read-only), `--profile qa` (sol, low, read-only) |
-| `agents/reviewer.toml`, `agents/explorer.toml` | `~/.codex/agents/` | 명시 요청 시 생성되는 서브에이전트 역할. reviewer 는 독립 리뷰, explorer 는 읽기 전용 탐색 |
+| `agents/reviewer.toml`, `agents/explorer.toml` | `~/.codex/agents/` | 명시 요청 시 생성되는 서브에이전트 역할. reviewer 는 독립 리뷰(sol high), explorer 는 읽기 전용 탐색(luna low) |
+| `scripts/codex_usage.py`, `hooks.json` | `~/.codex/scripts/`, `~/.codex/hooks.json` | 턴마다 세션 누적·기간 누적·예산 대비 % 를 표시 (§2a) |
+
+## 2a. 사용량 표시 — 답변마다 누적 토큰 보기
+
+Codex 는 스레드마다 `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` 을 쓰고, 턴마다 `token_count` 이벤트에
+누적(`total_token_usage`)과 그 턴(`last_token_usage`)을 기록한다. 네트워크 없이 이 파일만 읽으면 된다.
+
+`codex_usage.py` 가 두 hook 에서 돈다.
+
+| 이벤트 | 출력 | 효과 |
+|---|---|---|
+| `UserPromptSubmit` | 한 줄 텍스트 `[usage] 세션 … · month 누적 …/예산 (…%)` | 모델의 개발자 컨텍스트로 들어간다. 전역 규칙 6절이 이 줄을 답변 마지막 줄에 옮기게 한다. 값은 턴 시작 시점(한 턴 전까지) 누적이다 |
+| `Stop` | `{"systemMessage": "[usage] …"}` | 턴이 끝난 뒤 UI 에 경고 줄로 표시된다. 이번 턴까지 포함한 값이다 |
+
+손으로 볼 때:
+
+```bash
+python ~/.codex/scripts/codex_usage.py                       # 최근 세션 + 이번 달 합계
+python ~/.codex/scripts/codex_usage.py --all --period week   # 이번 주 세션 목록
+```
+
+예산은 스크립트 맨 위 `BUDGET_TOKENS`(기본 3,000,000)·`BUDGET_PERIOD`(month)·`COUNT_CACHED` 로 바꾼다.
+"3000" 이라는 쿼터의 단위(토큰·K·M)와 캐시 입력을 세는지는 사내 기준을 확인해 맞춘다.
+외부망 Mac 의 10월 기록으로 돌려 보면 298 세션 1.8억 토큰 중 대부분이 cached input 이라, 캐시를 빼면 수치가 크게 달라진다.
+
+검증된 것(외부망 Mac, 2026-10-28): CLI 모드, 두 hook 모드, 깨진 stdin(Windows 비ASCII 버그 openai/codex#23784) 폴백.
+검증 못 한 것: 데스크톱 앱이 Stop 의 `systemMessage` 를 어디에 보여 주는지, Stop 이 울릴 때 마지막 `token_count` 가 이미 기록돼 있는지.
+둘 중 하나가 안 보이면 UserPromptSubmit 경로(답변 마지막 줄)만으로도 한 턴 지연된 값은 본다.
+Codex CLI 에서는 `/status` 로도 현재 스레드 사용량을 본다.
 
 ## 2. 실행 정책(rules)이 효율에 가장 크다
 
@@ -62,7 +98,7 @@ Codex 문서가 커스텀 프롬프트를 deprecated 로 표시했고, 0.117.0 �
 
 ## 5. 넣지 않은 것
 
-- hooks(`hooks.json`): 외부망의 hooks 는 전부 UI 브리지용이라 가져올 것이 없다. 저장소마다 `scripts/check.ps1`(린트+테스트) 한 개를 두고 AGENTS.md 에 "변경 후 이 명령" 으로 적는 편이 단순하다.
+- 그 밖의 hooks: 외부망의 hooks 는 전부 UI 브리지용이라 가져올 것이 없다. 사용량 표시 두 개만 둔다. 린트·테스트는 저장소마다 `scripts/check.ps1` 한 개를 두고 AGENTS.md 에 "변경 후 이 명령" 으로 적는 편이 단순하다.
 - automations: 앱 기능이지만 운영 정책상 쓰지 않는다.
 - memories(`features.memories`): 폐쇄망 모델에서 동작하는지 확인하지 못했다.
 - MCP: 연동되지 않는다.
