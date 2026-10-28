@@ -52,8 +52,9 @@ python ~/.codex/scripts/codex_usage.py                       # 최근 세션 + �
 python ~/.codex/scripts/codex_usage.py --all --period week   # 이번 주 세션 목록
 ```
 
-예산은 스크립트 맨 위 `BUDGET_TOKENS`(기본 3,000,000)·`BUDGET_PERIOD`(month)·`COUNT_CACHED` 로 바꾼다.
-"3000" 이라는 쿼터의 단위(토큰·K·M)와 캐시 입력을 세는지는 사내 기준을 확인해 맞춘다.
+예산은 사내 기준 수치 "3000" 을 표시 기준으로 쓴다. 스크립트 맨 위 `BUDGET_UNITS`(3000)·`TOKENS_PER_UNIT`(1 단위 = 1,000 토큰, 가정값)·
+`BUDGET_PERIOD`(month)·`COUNT_CACHED` 로 바꾼다. 출력은 `누적 1,234/3,000 (41.1%, 1.2M tok)` 처럼 단위와 토큰을 같이 보여 준다.
+보정: 사내 계기가 보여 주는 소모량과 같은 기간의 `tok` 값을 비교해 `TOKENS_PER_UNIT` 을 맞춘다. 캐시 입력을 세지 않는 기준이면 `COUNT_CACHED = False`.
 외부망 Mac 의 10월 기록으로 돌려 보면 298 세션 1.8억 토큰 중 대부분이 cached input 이라, 캐시를 빼면 수치가 크게 달라진다.
 
 검증된 것(외부망 Mac, 2026-10-28): CLI 모드, 두 hook 모드, 깨진 stdin(Windows 비ASCII 버그 openai/codex#23784) 폴백.

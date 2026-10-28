@@ -6,7 +6,7 @@ Codex 는 스레드마다 $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl 을 �
 
 사용:
   python codex_usage.py                      # 가장 최근 세션 + 이번 기간 합계
-  python codex_usage.py --period month --budget 3000000
+  python codex_usage.py --period month --budget 3000 --unit 1000
   python codex_usage.py --all                # 기간 안 세션 목록
   echo '<hook stdin JSON>' | python codex_usage.py --hook
      UserPromptSubmit → 한 줄 텍스트(모델 컨텍스트로 들어감)
@@ -24,10 +24,11 @@ import os
 import sys
 from pathlib import Path
 
-# ── 예산 설정: 사내 쿼터에 맞춘다 ──────────────────────────────────────
-BUDGET_TOKENS = 3_000_000   # 기간 예산. 쿼터가 "3000" 이면 단위(K? M?)를 확인해 바꾼다
+# ── 예산 설정: 사내 기준 "3000" 을 표시 기준으로 쓴다 ─────────────────
+BUDGET_UNITS = 3000         # 사내 예산 수치(단위는 사내 기준). 분모로만 쓴다
+TOKENS_PER_UNIT = 1000      # 1 단위 = 몇 토큰인지. 가정값. 사내 계기와 이 스크립트 수치를 비교해 보정한다
 BUDGET_PERIOD = "month"     # day | week | month | all
-COUNT_CACHED = True         # False 면 cached_input_tokens 를 합계에서 뺀다(쿼터가 캐시를 안 세면)
+COUNT_CACHED = True         # False 면 cached_input_tokens 를 합계에서 뺀다(사내 기준이 캐시를 안 세면)
 
 CODEX_HOME = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
 SESSIONS = CODEX_HOME / "sessions"
@@ -103,7 +104,7 @@ def find_session(session_id: str | None, transcript: str | None) -> Path | None:
     return cands[-1] if cands else None
 
 
-def summarize(session_path: Path | None, period: str, budget: int) -> dict:
+def summarize(session_path: Path | None, period: str, budget: int, unit: int) -> dict:
     now = dt.datetime.now()
     start = period_start(period, now)
     period_total = 0
@@ -116,15 +117,16 @@ def summarize(session_path: Path | None, period: str, budget: int) -> dict:
     cur = read_rollout(session_path) if session_path else None
     return {
         "now": now, "period": period, "period_start": start, "period_total": period_total,
-        "period_sessions": period_sessions, "budget": budget, "session": cur,
+        "period_sessions": period_sessions, "budget": budget, "unit": unit, "session": cur,
     }
 
 
 def one_line(s: dict) -> str:
     cur = s["session"]
     sess = f"세션 {fmt(tokens(cur['total']))} ({cur['turns']}턴, 마지막 턴 {fmt(tokens(cur['last']))})" if cur and cur["total"] else "세션 기록 없음"
-    pct = (s["period_total"] / s["budget"] * 100) if s["budget"] else 0
-    per = f"{s['period']} 누적 {fmt(s['period_total'])}/{fmt(s['budget'])} ({pct:.1f}%)"
+    used_units = s["period_total"] / s["unit"] if s["unit"] else 0
+    pct = (used_units / s["budget"] * 100) if s["budget"] else 0
+    per = f"{s['period']} 누적 {used_units:,.0f}/{s['budget']:,} ({pct:.1f}%, {fmt(s['period_total'])} tok)"
     warn = " ⚠ 예산 80% 초과" if pct >= 80 else ""
     return f"[usage] {sess} · {per}{warn}"
 
@@ -151,7 +153,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--hook", action="store_true", help="stdin 의 hook JSON 을 읽어 이벤트에 맞는 출력")
     ap.add_argument("--period", default=BUDGET_PERIOD, choices=["day", "week", "month", "all"])
-    ap.add_argument("--budget", type=int, default=BUDGET_TOKENS)
+    ap.add_argument("--budget", type=int, default=BUDGET_UNITS, help="예산 수치(사내 단위)")
+    ap.add_argument("--unit", type=int, default=TOKENS_PER_UNIT, help="1 단위당 토큰 수")
     ap.add_argument("--all", action="store_true", help="기간 안 세션 목록")
     ap.add_argument("--session", help="rollout 파일 경로(생략하면 최근 세션)")
     a = ap.parse_args()
@@ -166,7 +169,7 @@ def main() -> int:
             event = "Stop" if '"Stop"' in raw else "UserPromptSubmit"   # Windows 비ASCII 깨짐(codex#23784) 대비
 
     path = Path(a.session) if a.session else find_session(session_id, transcript)
-    s = summarize(path, a.period, a.budget)
+    s = summarize(path, a.period, a.budget, a.unit)
 
     if a.hook:
         line = one_line(s)

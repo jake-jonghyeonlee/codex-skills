@@ -48,4 +48,4 @@ notification_condition = "unfocused"
 
 # ── 사용량 표시(hooks.json + scripts/codex_usage.py) ──────────────────
 # hooks 는 기본으로 켜져 있다. 새 hook 은 Codex 에서 /hooks 로 한 번 신뢰해야 돈다.
-# 예산·기간은 scripts/codex_usage.py 맨 위 BUDGET_TOKENS / BUDGET_PERIOD 에서 바꾼다.
+# 예산(사내 기준 3000)·단위·기간은 scripts/codex_usage.py 맨 위 BUDGET_UNITS / TOKENS_PER_UNIT / BUDGET_PERIOD 에서 바꾼다.
