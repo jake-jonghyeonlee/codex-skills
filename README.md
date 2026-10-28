@@ -8,6 +8,7 @@
 - 출처 커밋·라이선스: [`docs/source-inventory.md`](docs/source-inventory.md), [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 - Codex 가 따르는 운영 규칙: [`AGENTS.md`](AGENTS.md) (대상 저장소에 같이 복사한다)
 - Codex 앱 전역 규칙(행동·문서 신뢰도·통제 언어·Git 안전): [`global/AGENTS.md`](global/AGENTS.md) → `%USERPROFILE%\.codex\AGENTS.md` 로 복사. 출처와 근거는 [`docs/global-rules.md`](docs/global-rules.md)
+- Codex 앱 로컬 설정(실행 정책 rules, config 키, 프로필, 서브에이전트 역할): [`codex-home/`](codex-home/) → `%USERPROFILE%\.codex\` 아래. 설명은 [`docs/codex-home.md`](docs/codex-home.md)
 
 ## 1. 구성
 
@@ -15,6 +16,7 @@
 .agents/skills/     ← Codex 가 자동 탐색하는 17종
 optional/skills/    ← 탐색 경로 밖. 필요할 때 .agents/skills/ 로 복사해 켠다 (10종)
 global/AGENTS.md    ← Codex 앱 전역 규칙. %USERPROFILE%\.codex\AGENTS.md 로 복사 (모든 저장소에 적용)
+codex-home/         ← rules/default.rules, config.toml.example, review·qa 프로필, agents/*.toml (docs/codex-home.md)
 scripts/            ← install_skills.sh, verify_skills.py
 requirements-skills.txt / requirements-optional.txt
 ```

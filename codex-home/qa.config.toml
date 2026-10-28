@@ -1,0 +1,7 @@
+# 질의응답·탐색 프로필: codex --profile qa
+# 설치: %USERPROFILE%\.codex\qa.config.toml
+# 코드를 읽고 설명만 할 때. 전역 규칙 5절(질의응답 중 수정 금지)을 샌드박스로 강제한다.
+model = "gpt-6.1-sol"
+model_reasoning_effort = "low"
+sandbox_mode = "read-only"
+approval_policy = "on-request"

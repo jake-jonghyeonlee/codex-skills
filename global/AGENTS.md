@@ -87,6 +87,7 @@ Codex 가 쓰는 답변·보고서·리뷰·회고에 적용한다.
 - 등급은 계획이 아니라 실제 diff 로 다시 판정한다. High-risk 면 변경 요약 첫 줄에 그 사실과 이유를 쓴다.
 - High-risk 변경은 작성자가 아닌 새 스레드에서 `differential-review` 로 독립 리뷰를 받는다. 자기 변경을 자기가 PASS 하지 않는다. 리뷰 PASS 는 그 commit 에만 유효하다. 수정 후에는 다시 받는다.
 - Normal 은 `verification-before-completion` 으로 검증 출력을 남기면 된다. Trivial 은 검증만 한다.
+- 서브에이전트는 사용자가 요청할 때만 만든다. 편집하는 서브에이전트는 동시에 1개, 읽기 전용(reviewer·explorer)은 1개까지다. 서브에이전트는 다시 서브에이전트를 만들지 않는다.
 
 ## 7b. 도구 사용
 
