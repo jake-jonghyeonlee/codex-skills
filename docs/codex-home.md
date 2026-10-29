@@ -42,20 +42,34 @@ Codex 는 스레드마다 `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` 을 쓰
 
 | 이벤트 | 출력 | 효과 |
 |---|---|---|
-| `UserPromptSubmit` | 한 줄 텍스트 `[usage] 세션 … · month 누적 …/예산 (…%)` | 모델의 개발자 컨텍스트로 들어간다. 전역 규칙 6절이 이 줄을 답변 마지막 줄에 옮기게 한다. 값은 턴 시작 시점(한 턴 전까지) 누적이다 |
-| `Stop` | `{"systemMessage": "[usage] …"}` | 턴이 끝난 뒤 UI 에 경고 줄로 표시된다. 이번 턴까지 포함한 값이다 |
+| `UserPromptSubmit` | 한 줄 텍스트 | 모델의 개발자 컨텍스트로 들어간다. 전역 규칙 6절이 이 줄을 답변 마지막 줄에 옮기게 한다. 값은 턴 시작 시점(한 턴 전까지) 기준이다 |
+| `Stop` | `{"systemMessage": "…"}` | 턴이 끝난 뒤 UI 에 경고 줄로 표시된다. 이번 턴까지 포함한 값이다 |
 
-손으로 볼 때:
+표시 형식(엔터프라이즈 기준, 2026-10-29):
 
-```bash
-python ~/.codex/scripts/codex_usage.py                       # 최근 세션 + 이번 달 합계
-python ~/.codex/scripts/codex_usage.py --all --period week   # 이번 주 세션 목록
+```
+[usage] 턴 사용: 77.3k 토큰 · 대화 누적: 359.3k 토큰 (컨텍스트 28%) · 예상 소비: 11.7 credits (대화 54.2) · 계정 한도 잔여: 93.3% (2,800/3,000, 10-26 08:59 동기화 기준)
 ```
 
-예산은 사내 기준 수치 "3000" 을 표시 기준으로 쓴다. 스크립트 맨 위 `BUDGET_UNITS`(3000)·`TOKENS_PER_UNIT`(1 단위 = 1,000 토큰, 가정값)·
-`BUDGET_PERIOD`(month)·`COUNT_CACHED` 로 바꾼다. 출력은 `누적 1,234/3,000 (41.1%, 1.2M tok)` 처럼 단위와 토큰을 같이 보여 준다.
-보정: 사내 계기가 보여 주는 소모량과 같은 기간의 `tok` 값을 비교해 `TOKENS_PER_UNIT` 을 맞춘다. 캐시 입력을 세지 않는 기준이면 `COUNT_CACHED = False`.
-외부망 Mac 의 10월 기록으로 돌려 보면 298 세션 1.8억 토큰 중 대부분이 cached input 이라, 캐시를 빼면 수치가 크게 달라진다.
+| 항목 | 출처 |
+|---|---|
+| 턴 사용 | 현재 스레드 rollout 의 마지막 `token_count.last_token_usage` |
+| 대화 누적 · 컨텍스트 % | 같은 이벤트의 `total_token_usage`, `last input_tokens / model_context_window` |
+| 예상 소비 credits | 토큰 × 환산율(credits/1k 토큰). 환산율은 가정값 1.0 에서 시작해 `--sync` 두 번이면 자동 보정 |
+| 계정 한도 잔여 % | **로그에 없다.** 사용자가 UI 에서 읽은 잔여값을 `--sync` 로 넣은 시점부터, 그 뒤 모든 스레드의 토큰 × 환산율을 빼서 추정 |
+
+운용:
+
+```bash
+python ~/.codex/scripts/codex_usage.py --sync 2950        # 엔터프라이즈 UI 의 잔여 credits 를 읽어 기록(하루 한 번이면 충분)
+python ~/.codex/scripts/codex_usage.py --limit 3000       # 한도가 바뀌면
+python ~/.codex/scripts/codex_usage.py                    # 상세: 환산율·보정 근거·최근 sync
+```
+
+두 번째 `--sync` 부터는 두 sync 사이의 실제 credits 감소량 ÷ 로컬 토큰량으로 환산율을 다시 계산해 `usage_state.json` 에 저장한다.
+외부망 Mac 기록으로 시험하면(3000 → 2800, 이틀, 1.33M 토큰) 환산율 0.15 가 나왔다. 숫자 자체는 가짜이고 보정 경로가 도는지만 확인한 것이다.
+캐시 입력을 세지 않는 기준이면 스크립트 맨 위 `COUNT_CACHED = False`. 잔여 20% 이하면 줄 끝에 ⚠ 가 붙는다.
+한계: 다른 PC·웹에서 쓴 소비는 로컬에 없어 추정에서 빠진다. 그래서 하루 한 번 `--sync` 로 실제값에 다시 맞춘다.
 
 검증된 것(외부망 Mac, 2026-10-28): CLI 모드, 두 hook 모드, 깨진 stdin(Windows 비ASCII 버그 openai/codex#23784) 폴백.
 검증 못 한 것: 데스크톱 앱이 Stop 의 `systemMessage` 를 어디에 보여 주는지, Stop 이 울릴 때 마지막 `token_count` 가 이미 기록돼 있는지.
