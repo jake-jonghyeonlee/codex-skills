@@ -45,7 +45,3 @@ notification_condition = "unfocused"
 # ── 프로필(같은 폴더의 <이름>.config.toml 을 --profile <이름> 으로 겹쳐 씀) ──
 # review.config.toml : 리뷰 전용, gpt-6.1-sol, effort high, read-only
 # qa.config.toml     : 질의응답·탐색, gpt-6-luna, effort low, read-only
-
-# ── 사용량 표시(hooks.json + scripts/codex_usage.py) ──────────────────
-# hooks 는 기본으로 켜져 있다. 새 hook 은 Codex 에서 /hooks 로 한 번 신뢰해야 돈다.
-# 예산(사내 기준 3000)·단위·기간은 scripts/codex_usage.py 맨 위 BUDGET_UNITS / TOKENS_PER_UNIT / BUDGET_PERIOD 에서 바꾼다.

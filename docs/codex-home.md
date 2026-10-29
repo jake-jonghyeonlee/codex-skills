@@ -12,14 +12,9 @@ cp codex-home/rules/default.rules   ~/.codex/rules/default.rules
 cp codex-home/agents/*.toml         ~/.codex/agents/
 cp codex-home/review.config.toml    ~/.codex/review.config.toml
 cp codex-home/qa.config.toml        ~/.codex/qa.config.toml
-mkdir -p ~/.codex/scripts && cp codex-home/scripts/codex_usage.py ~/.codex/scripts/
-cp codex-home/hooks.json ~/.codex/hooks.json      # 기존 hooks.json 이 있으면 두 이벤트만 합친다
 # config.toml 은 덮어쓰지 말고 필요한 키만 옮긴다
 cat codex-home/config.toml.example
 ```
-
-Windows 에서는 `hooks.json` 의 `commandWindows` 경로 `C:/Users/<계정>/…` 을 실제 계정으로 바꾼다.
-새 hook 은 Codex 에서 `/hooks` 로 한 번 신뢰(trust)해야 돈다. 파일을 바꾸면 해시가 달라져 다시 신뢰해야 한다.
 
 모델 배치(2026-10-28 사용자 결정): 일상·worker·explorer = `gpt-6-luna`, 리뷰(review 프로필·reviewer 에이전트) = `gpt-6.1-sol`.
 
@@ -29,52 +24,8 @@ Windows 에서는 `hooks.json` 의 `commandWindows` 경로 `C:/Users/<계정>/�
 |---|---|---|
 | `rules/default.rules` | `~/.codex/rules/` | 명령 접두사별 allow / prompt / forbidden. 승인 클릭을 줄이고 파괴적 git 을 막는다 |
 | `config.toml.example` | `~/.codex/config.toml` 에 키만 옮김 | 모델·effort, 승인·샌드박스, AGENTS.md 상한 64 KiB, 스킬 예산 10,000, 서브에이전트 상한 2, 알림 |
-| `review.config.toml`, `qa.config.toml` | `~/.codex/` | `codex --profile review` (luna, high, read-only), `--profile qa` (sol, low, read-only) |
+| `review.config.toml`, `qa.config.toml` | `~/.codex/` | `codex --profile review` (sol, high, read-only), `--profile qa` (luna, low, read-only) |
 | `agents/reviewer.toml`, `agents/explorer.toml` | `~/.codex/agents/` | 명시 요청 시 생성되는 서브에이전트 역할. reviewer 는 독립 리뷰(sol high), explorer 는 읽기 전용 탐색(luna low) |
-| `scripts/codex_usage.py`, `hooks.json` | `~/.codex/scripts/`, `~/.codex/hooks.json` | 턴마다 세션 누적·기간 누적·예산 대비 % 를 표시 (§2a) |
-
-## 2a. 사용량 표시 — 답변마다 누적 토큰 보기
-
-Codex 는 스레드마다 `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` 을 쓰고, 턴마다 `token_count` 이벤트에
-누적(`total_token_usage`)과 그 턴(`last_token_usage`)을 기록한다. 네트워크 없이 이 파일만 읽으면 된다.
-
-`codex_usage.py` 가 두 hook 에서 돈다.
-
-| 이벤트 | 출력 | 효과 |
-|---|---|---|
-| `UserPromptSubmit` | 한 줄 텍스트 | 모델의 개발자 컨텍스트로 들어간다. 전역 규칙 6절이 이 줄을 답변 마지막 줄에 옮기게 한다. 값은 턴 시작 시점(한 턴 전까지) 기준이다 |
-| `Stop` | `{"systemMessage": "…"}` | 턴이 끝난 뒤 UI 에 경고 줄로 표시된다. 이번 턴까지 포함한 값이다 |
-
-표시 형식(엔터프라이즈 기준, 2026-10-29):
-
-```
-[usage] 턴 사용: 77.3k 토큰 · 대화 누적: 359.3k 토큰 (컨텍스트 28%) · 예상 소비: 11.7 credits (대화 54.2) · 계정 한도 잔여: 93.3% (2,800/3,000, 10-26 08:59 동기화 기준)
-```
-
-| 항목 | 출처 |
-|---|---|
-| 턴 사용 | 현재 스레드 rollout 의 마지막 `token_count.last_token_usage` |
-| 대화 누적 · 컨텍스트 % | 같은 이벤트의 `total_token_usage`, `last input_tokens / model_context_window` |
-| 예상 소비 credits | 토큰 × 환산율(credits/1k 토큰). 환산율은 가정값 1.0 에서 시작해 `--sync` 두 번이면 자동 보정 |
-| 계정 한도 잔여 % | **로그에 없다.** 사용자가 UI 에서 읽은 잔여값을 `--sync` 로 넣은 시점부터, 그 뒤 모든 스레드의 토큰 × 환산율을 빼서 추정 |
-
-운용:
-
-```bash
-python ~/.codex/scripts/codex_usage.py --sync 2950        # 엔터프라이즈 UI 의 잔여 credits 를 읽어 기록(하루 한 번이면 충분)
-python ~/.codex/scripts/codex_usage.py --limit 3000       # 한도가 바뀌면
-python ~/.codex/scripts/codex_usage.py                    # 상세: 환산율·보정 근거·최근 sync
-```
-
-두 번째 `--sync` 부터는 두 sync 사이의 실제 credits 감소량 ÷ 로컬 토큰량으로 환산율을 다시 계산해 `usage_state.json` 에 저장한다.
-외부망 Mac 기록으로 시험하면(3000 → 2800, 이틀, 1.33M 토큰) 환산율 0.15 가 나왔다. 숫자 자체는 가짜이고 보정 경로가 도는지만 확인한 것이다.
-캐시 입력을 세지 않는 기준이면 스크립트 맨 위 `COUNT_CACHED = False`. 잔여 20% 이하면 줄 끝에 ⚠ 가 붙는다.
-한계: 다른 PC·웹에서 쓴 소비는 로컬에 없어 추정에서 빠진다. 그래서 하루 한 번 `--sync` 로 실제값에 다시 맞춘다.
-
-검증된 것(외부망 Mac, 2026-10-28): CLI 모드, 두 hook 모드, 깨진 stdin(Windows 비ASCII 버그 openai/codex#23784) 폴백.
-검증 못 한 것: 데스크톱 앱이 Stop 의 `systemMessage` 를 어디에 보여 주는지, Stop 이 울릴 때 마지막 `token_count` 가 이미 기록돼 있는지.
-둘 중 하나가 안 보이면 UserPromptSubmit 경로(답변 마지막 줄)만으로도 한 턴 지연된 값은 본다.
-Codex CLI 에서는 `/status` 로도 현재 스레드 사용량을 본다.
 
 ## 2. 실행 정책(rules)이 효율에 가장 크다
 
@@ -113,7 +64,7 @@ Codex 문서가 커스텀 프롬프트를 deprecated 로 표시했고, 0.117.0 �
 
 ## 5. 넣지 않은 것
 
-- 그 밖의 hooks: 외부망의 hooks 는 전부 UI 브리지용이라 가져올 것이 없다. 사용량 표시 두 개만 둔다. 린트·테스트는 저장소마다 `scripts/check.ps1` 한 개를 두고 AGENTS.md 에 "변경 후 이 명령" 으로 적는 편이 단순하다.
+- hooks(`hooks.json`): 외부망의 hooks 는 전부 UI 브리지용이라 가져올 것이 없다. 린트·테스트는 저장소마다 `scripts/check.ps1` 한 개를 두고 AGENTS.md 에 "변경 후 이 명령" 으로 적는 편이 단순하다. 턴별 토큰 사용량 표시(hook + rollout 파싱)는 폐쇄망에서 따로 추가한다(2026-10-29 보류, 이력은 commit `1dbb071`).
 - automations: 앱 기능이지만 운영 정책상 쓰지 않는다.
 - memories(`features.memories`): 폐쇄망 모델에서 동작하는지 확인하지 못했다.
 - MCP: 연동되지 않는다.

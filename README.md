@@ -16,7 +16,7 @@
 .agents/skills/     ← Codex 가 자동 탐색하는 17종
 optional/skills/    ← 탐색 경로 밖. 필요할 때 .agents/skills/ 로 복사해 켠다 (10종)
 global/AGENTS.md    ← Codex 앱 전역 규칙. %USERPROFILE%\.codex\AGENTS.md 로 복사 (모든 저장소에 적용)
-codex-home/         ← rules/default.rules, config.toml.example, review·qa 프로필, agents/*.toml, 사용량 hook (docs/codex-home.md)
+codex-home/         ← rules/default.rules, config.toml.example, review·qa 프로필, agents/*.toml (docs/codex-home.md)
 scripts/            ← install_skills.sh, verify_skills.py
 requirements-skills.txt / requirements-optional.txt
 ```
